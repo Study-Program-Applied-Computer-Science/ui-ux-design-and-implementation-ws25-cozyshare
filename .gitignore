@@ -1,0 +1,79 @@
+# -------------------------------------------
+#  General
+# -------------------------------------------
+.DS_Store
+Thumbs.db
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# -------------------------------------------
+#  Node / Backend
+# -------------------------------------------
+backend/node_modules/
+backend/dist/
+backend/build/
+backend/.env
+backend/.DS_Store
+
+# Optional backend uploads (REMOVE if you need)
+backend/uploads/
+
+# PM2 / cache
+.pids
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage folders
+coverage
+
+# -------------------------------------------
+#  Vue / Frontend
+# -------------------------------------------
+frontend/node_modules/
+frontend/dist/
+frontend/.env
+frontend/.DS_Store
+
+# Vite / Vue
+frontend/.vite/
+frontend/.cache/
+.cache/
+dist/
+
+# Local dev artifacts
+*.local
+*.tmp
+*.temp
+
+# -------------------------------------------
+#  IDE / Editor Settings
+# -------------------------------------------
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# -------------------------------------------
+#  Optional: OS + Misc
+# -------------------------------------------
+*.bak
+*.orig
+*.rej
+
+# -------------------------------------------
+#  Git
+# -------------------------------------------
+#.gitignore
