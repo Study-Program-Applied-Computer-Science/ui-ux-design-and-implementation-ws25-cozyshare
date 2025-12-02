@@ -1,6 +1,5 @@
 <template>
   <div class="container">
-
     <!-- LOGIN & REGISTER BUTTONS -->
     <div class="login_registration">
       <Button
@@ -67,64 +66,59 @@
         <input type="text" v-model="inviteCode" placeholder="Enter invite code" />
       </div>
 
-      <input
-        type="submit"
-        class="btn btn-block"
-        :value="isLoginActive ? 'Login' : 'Register'"
-      />
+      <input type="submit" class="btn btn-block" :value="isLoginActive ? 'Login' : 'Register'" />
     </form>
-
   </div>
 </template>
 
 <script>
-import Button from "../components/Button.vue";
-import axios from "axios";
+import Button from '../components/Button.vue'
+import axios from 'axios'
 
 export default {
-  name: "Login",
+  name: 'Login',
 
   data() {
     return {
-      email: "",
-      password: "",
-      name: "",
+      email: '',
+      password: '',
+      name: '',
       isLoginActive: false,
       isRegisterActive: false,
       isRegistrationSuccessfull: false,
       isUserLoggedIn: false,
 
-      householdMode: "create", // 'create' or 'join'
-      householdName: "",
-      inviteCode: "",
-    };
+      householdMode: 'create', // 'create' or 'join'
+      householdName: '',
+      inviteCode: '',
+    }
   },
 
   components: {
     Button,
   },
 
-  emits: ["authenticated"],
+  emits: ['authenticated'],
 
   methods: {
     showLogin() {
-      this.isLoginActive = true;
-      this.isRegisterActive = false;
-      this.isRegistrationSuccessfull = false;
+      this.isLoginActive = true
+      this.isRegisterActive = false
+      this.isRegistrationSuccessfull = false
     },
 
     showRegister() {
-      this.isRegisterActive = true;
-      this.isLoginActive = false;
-      this.isRegistrationSuccessfull = false;
+      this.isRegisterActive = true
+      this.isLoginActive = false
+      this.isRegistrationSuccessfull = false
     },
 
     async onSubmit(e) {
-      e.preventDefault();
+      e.preventDefault()
 
-      if (!this.email.includes("@") || this.password.length < 6) {
-        alert("Enter valid email and password (min 6 chars)");
-        return;
+      if (!this.email.includes('@') || this.password.length < 6) {
+        alert('Enter valid email and password (min 6 chars)')
+        return
       }
 
       try {
@@ -135,47 +129,46 @@ export default {
             email: this.email,
             password: this.password,
             mode: this.householdMode,
-            householdName: this.householdMode === "create" ? this.householdName : null,
-            inviteCode: this.householdMode === "join" ? this.inviteCode : null,
-          };
+            householdName: this.householdMode === 'create' ? this.householdName : null,
+            inviteCode: this.householdMode === 'join' ? this.inviteCode : null,
+          }
 
-          const res = await axios.post("http://localhost:5000/api/auth/register", payload);
+          const res = await axios.post('http://localhost:5000/api/auth/register', payload)
 
           if (res.status === 201) {
-            this.isRegistrationSuccessfull = true;
-            this.isRegisterActive = false;
+            this.isRegistrationSuccessfull = true
+            this.isRegisterActive = false
 
-            if (res.data.householdCode && this.householdMode === "create") {
-              alert(`Your household invite code is: ${res.data.householdCode}`);
+            if (res.data.householdCode && this.householdMode === 'create') {
+              alert(`Your household invite code is: ${res.data.householdCode}`)
             }
 
-            this.email = "";
-            this.password = "";
-            this.name = "";
-            this.householdName = "";
-            this.inviteCode = "";
+            this.email = ''
+            this.password = ''
+            this.name = ''
+            this.householdName = ''
+            this.inviteCode = ''
           }
         }
 
         if (this.isLoginActive) {
-          const res = await axios.post("http://localhost:5000/api/auth/login", {
+          const res = await axios.post('http://localhost:5000/api/auth/login', {
             email: this.email,
             password: this.password,
-          });
+          })
 
           if (res.data) {
-            localStorage.setItem("cozyshare_user", JSON.stringify(res.data.user));
-            this.$emit("authenticated", res.data.user);
+            localStorage.setItem('cozyshare_user', JSON.stringify(res.data.user))
+            this.$emit('authenticated', res.data.user)
           }
         }
       } catch (err) {
-        alert(err.response?.data?.message || "Something went wrong");
+        alert(err.response?.data?.message || 'Something went wrong')
       }
     },
   },
-};
+}
 </script>
-
 
 <style scoped>
 .container {
@@ -230,5 +223,4 @@ export default {
 .toggle-row label {
   font-size: 0.9rem;
 }
-
 </style>

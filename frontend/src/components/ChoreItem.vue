@@ -3,7 +3,7 @@
     class="chore-item"
     :class="{
       done: chore.isDone,
-      today: isToday
+      today: isToday,
     }"
   >
     <div class="chore-main">
@@ -11,40 +11,35 @@
       <p class="meta">
         Assigned to: <strong>{{ chore.assignedTo }}</strong>
       </p>
-      <p v-if="chore.dueDate" class="meta">
-        Due: {{ formattedDueDate }}
-      </p>
+      <p v-if="chore.dueDate" class="meta">Due: {{ formattedDueDate }}</p>
     </div>
 
     <div class="chore-actions">
       <button class="btn small" @click="$emit('toggle-done', chore._id)">
-        {{ chore.isDone ? "Mark Pending" : "Mark Done" }}
+        {{ chore.isDone ? 'Mark Pending' : 'Mark Done' }}
       </button>
-      <button class="btn small danger" @click="$emit('delete-chore', chore._id)">
-        Delete
-      </button>
+      <button class="btn small danger" @click="$emit('delete-chore', chore._id)">Delete</button>
     </div>
   </div>
 </template>
 
-
 <script>
 export default {
-  name: "ChoreItem",
+  name: 'ChoreItem',
   props: {
     chore: Object,
   },
   computed: {
     formattedDueDate() {
-      if (!this.chore.dueDate) return "";
-      return new Date(this.chore.dueDate).toLocaleDateString();
+      if (!this.chore.dueDate) return ''
+      return new Date(this.chore.dueDate).toLocaleDateString()
     },
   },
   props: {
-  chore: Object,
-  isToday: Boolean
-},
-};
+    chore: Object,
+    isToday: Boolean,
+  },
+}
 </script>
 
 <style scoped>
@@ -94,5 +89,4 @@ export default {
   border-left: 6px solid #16a34a;
   background: #ecfdf5;
 }
-
 </style>

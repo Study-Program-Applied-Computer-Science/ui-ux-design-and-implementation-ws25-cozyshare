@@ -1,23 +1,19 @@
 <template>
-  <button
-    :style="{ background: color }"
-    class="btn"
-    @click="$emit(eventName)"
-  >
+  <button :style="{ background: color }" class="btn" @click="$emit(eventName)">
     {{ text }}
   </button>
 </template>
 
 <script>
 export default {
-  name: "Button",
+  name: 'Button',
 
   props: {
     text: String,
     color: String,
     eventName: String,
   },
-};
+}
 </script>
 
 <style scoped>

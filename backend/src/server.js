@@ -7,6 +7,7 @@ const connectDB = require("./config/db");
 const authRoutes = require("./routes/authRoutes");
 const healthRoutes = require("./routes/healthRoutes");
 const choreRoutes = require("./routes/choreRoutes");
+const noticeRoutes = require("./routes/noticeRoutes");
 
 
 const app = express();
@@ -23,6 +24,7 @@ app.use(morgan("dev"));
 app.use("/api/auth", authRoutes);
 app.use("/api/health", healthRoutes);
 app.use("/api/chores", choreRoutes);
+app.use("/api/notices", noticeRoutes);
 
 // root route
 app.get("/", (req, res) => {

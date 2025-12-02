@@ -1,9 +1,7 @@
 <template>
   <div class="chores-container">
     <h2>Chores</h2>
-    <p class="subtitle">
-      Manage shared household chores for your flatmates.
-    </p>
+    <p class="subtitle">Manage shared household chores for your flatmates.</p>
 
     <!-- Add new chore -->
     <form class="add-form" @submit="onSubmit">
@@ -45,13 +43,12 @@
   </div>
 </template>
 
-
 <script>
-import axios from "axios";
-import ChoreItem from "../components/ChoreItem.vue";
+import axios from 'axios'
+import ChoreItem from '../components/ChoreItem.vue'
 
 export default {
-  name: "Chores",
+  name: 'Chores',
 
   components: {
     ChoreItem,
@@ -63,29 +60,29 @@ export default {
 
   data() {
     return {
-      title: "",
-      assignedTo: "",
-      dueDate: "",
+      title: '',
+      assignedTo: '',
+      dueDate: '',
       chores: [],
       weeklyChores: {},
-    };
+    }
   },
 
   methods: {
     async fetchChores() {
       try {
-        if (!this.currentUser?.householdCode) return;
+        if (!this.currentUser?.householdCode) return
 
-        const res = await axios.get("http://localhost:5000/api/chores", {
+        const res = await axios.get('http://localhost:5000/api/chores', {
           params: {
             householdCode: this.currentUser.householdCode,
           },
-        });
+        })
 
-        this.chores = res.data;
-        this.organizeWeeklyChores();
+        this.chores = res.data
+        this.organizeWeeklyChores()
       } catch (err) {
-        console.error("Error fetching chores", err);
+        console.error('Error fetching chores', err)
       }
     },
 
@@ -99,50 +96,50 @@ export default {
         Friday: [],
         Saturday: [],
         Sunday: [],
-      };
+      }
 
       this.chores.forEach((chore) => {
-        if (!chore.dueDate) return;
+        if (!chore.dueDate) return
 
-        const date = new Date(chore.dueDate);
-        const dayIndex = date.getDay(); // 0 = Sun, 1 = Mon...
+        const date = new Date(chore.dueDate)
+        const dayIndex = date.getDay() // 0 = Sun, 1 = Mon...
         const dayNames = [
-          "Sunday",
-          "Monday",
-          "Tuesday",
-          "Wednesday",
-          "Thursday",
-          "Friday",
-          "Saturday",
-        ];
+          'Sunday',
+          'Monday',
+          'Tuesday',
+          'Wednesday',
+          'Thursday',
+          'Friday',
+          'Saturday',
+        ]
 
-        const dayName = dayNames[dayIndex];
-        week[dayName].push(chore);
-      });
+        const dayName = dayNames[dayIndex]
+        week[dayName].push(chore)
+      })
 
-      this.weeklyChores = week;
+      this.weeklyChores = week
     },
 
     // Highlight if due today
     isToday(chore) {
-      if (!chore.dueDate) return false;
+      if (!chore.dueDate) return false
 
-      const today = new Date();
-      const due = new Date(chore.dueDate);
+      const today = new Date()
+      const due = new Date(chore.dueDate)
 
       return (
         today.getDate() === due.getDate() &&
         today.getMonth() === due.getMonth() &&
         today.getFullYear() === due.getFullYear()
-      );
+      )
     },
 
     async onSubmit(e) {
-      e.preventDefault();
+      e.preventDefault()
 
       if (!this.title || !this.assignedTo) {
-        alert("Title and Assigned To are required");
-        return;
+        alert('Title and Assigned To are required')
+        return
       }
 
       try {
@@ -152,56 +149,51 @@ export default {
           dueDate: this.dueDate || null,
           createdBy: this.currentUser.email,
           householdCode: this.currentUser.householdCode,
-        };
+        }
 
-        const res = await axios.post("http://localhost:5000/api/chores", body);
-        this.chores.unshift(res.data);
-        this.organizeWeeklyChores();
+        const res = await axios.post('http://localhost:5000/api/chores', body)
+        this.chores.unshift(res.data)
+        this.organizeWeeklyChores()
 
-        this.title = "";
-        this.assignedTo = "";
-        this.dueDate = "";
+        this.title = ''
+        this.assignedTo = ''
+        this.dueDate = ''
       } catch (err) {
-        console.error("Error adding chore", err);
+        console.error('Error adding chore', err)
       }
     },
 
     async toggleDone(choreId) {
       try {
-        const res = await axios.patch(
-          `http://localhost:5000/api/chores/${choreId}/toggle`
-        );
+        const res = await axios.patch(`http://localhost:5000/api/chores/${choreId}/toggle`)
 
-        this.chores = this.chores.map((c) =>
-          c._id === choreId ? res.data : c
-        );
+        this.chores = this.chores.map((c) => (c._id === choreId ? res.data : c))
 
-        this.organizeWeeklyChores();
+        this.organizeWeeklyChores()
       } catch (err) {
-        console.error("Error toggling chore", err);
+        console.error('Error toggling chore', err)
       }
     },
 
     async deleteChore(choreId) {
-      if (!confirm("Delete this chore?")) return;
+      if (!confirm('Delete this chore?')) return
 
       try {
-        await axios.delete(`http://localhost:5000/api/chores/${choreId}`);
-        this.chores = this.chores.filter((c) => c._id !== choreId);
+        await axios.delete(`http://localhost:5000/api/chores/${choreId}`)
+        this.chores = this.chores.filter((c) => c._id !== choreId)
 
-        this.organizeWeeklyChores();
+        this.organizeWeeklyChores()
       } catch (err) {
-        console.error("Error deleting chore", err);
+        console.error('Error deleting chore', err)
       }
     },
   },
 
   mounted() {
-    this.fetchChores();
+    this.fetchChores()
   },
-};
+}
 </script>
-
 
 <style scoped>
 .chores-container {
