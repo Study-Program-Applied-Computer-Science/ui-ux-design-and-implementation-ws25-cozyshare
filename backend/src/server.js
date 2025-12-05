@@ -8,6 +8,7 @@ const authRoutes = require("./routes/authRoutes");
 const healthRoutes = require("./routes/healthRoutes");
 const choreRoutes = require("./routes/choreRoutes");
 const noticeRoutes = require("./routes/noticeRoutes");
+const groceryRoutes = require("./routes/groceryRoutes");
 
 
 const app = express();
@@ -25,6 +26,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/health", healthRoutes);
 app.use("/api/chores", choreRoutes);
 app.use("/api/notices", noticeRoutes);
+app.use("/api/groceries", groceryRoutes);
 
 // root route
 app.get("/", (req, res) => {

@@ -1,0 +1,27 @@
+:root {
+  --primary: #4d7cbf;
+  --primary-light: #cfe1f4;
+  --peach: #f5b195;
+  --cream: #fff9ef;
+  --pink: #fdf3d6;
+  --navy: #0e1f3b;
+
+  --text-dark: #0e1f3b;
+  --text-light: #4b5563;
+
+  --card-bg: #ffffff;
+  --card-border: #e5e7eb;
+
+  --soft-shadow: 0 4px 16px rgba(15, 23, 42, 0.06);
+}
+
+body {
+  background: var(--cream);
+  font-family:
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    Roboto,
+    sans-serif;
+  color: var(--text-dark);
+}

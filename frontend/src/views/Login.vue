@@ -20,7 +20,7 @@
     </div>
 
     <p v-if="isRegistrationSuccessfull" class="success-msg">
-      Registration Successful — Please Login
+      Registration Successful - Please Login
     </p>
 
     <!-- FORM -->
@@ -98,7 +98,7 @@ export default {
     Button,
   },
 
-  emits: ['authenticated'],
+  emits: ['user-authenticated'],
 
   methods: {
     showLogin() {
