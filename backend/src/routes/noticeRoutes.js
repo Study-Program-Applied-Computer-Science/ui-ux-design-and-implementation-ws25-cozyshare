@@ -3,48 +3,49 @@ const express = require("express");
 const router = express.Router();
 const Notice = require("../models/Notice");
 
-// GET /api/notices?householdCode=ABC123
-router.get("/", async (req, res) => {
+// GET /api/notices?householdCode=XXXX
+router.get('/', async (req, res) => {
   try {
-    const { householdCode } = req.query;
+    const { householdCode } = req.query
+    const filter = {}
 
-    if (!householdCode) {
-      return res.status(400).json({ message: "householdCode is required" });
+    if (householdCode) {
+      filter.householdCode = householdCode
     }
 
-    const notices = await Notice.find({ householdCode })
-      .sort({ createdAt: -1 }); // newest first
-
-    res.json(notices);
+    const notices = await Notice.find(filter).sort({ createdAt: -1 })
+    res.json(notices)
   } catch (err) {
-    console.error("Error fetching notices:", err);
-    res.status(500).json({ message: "Error fetching notices" });
+    console.error('Get notices error:', err)
+    res.status(500).json({ message: 'Server error fetching notices' })
   }
 });
 
 // POST /api/notices
-router.post("/", async (req, res) => {
+router.post('/', async (req, res) => {
   try {
-    const { title, message, createdBy, householdCode } = req.body;
+    const { title, message, householdCode, author } = req.body
 
-    if (!title || !message || !createdBy || !householdCode) {
-      return res.status(400).json({ message: "Missing required fields" });
+    // 👇 This is where your 400 is coming from
+    if (!title || !message || !householdCode) {
+      return res.status(400).json({ message: 'Missing required fields' })
     }
 
     const notice = await Notice.create({
       title,
       message,
-      createdBy,
       householdCode,
-    });
+      author: author || 'Someone',
+      likes: [],
+      comments: [],
+    })
 
-    res.status(201).json(notice);
+    res.status(201).json(notice)
   } catch (err) {
-    console.error("Error creating notice:", err);
-    res.status(500).json({ message: "Error creating notice" });
+    console.error('Create notice error:', err)
+    res.status(500).json({ message: 'Server error creating notice' })
   }
 });
-
 // PUT /api/notices/:id  (edit title/message)
 router.put("/:id", async (req, res) => {
   try {

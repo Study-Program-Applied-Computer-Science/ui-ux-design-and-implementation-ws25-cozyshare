@@ -4,6 +4,7 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
 const Household = require("../models/Household");
+
 const JWT_SECRET = process.env.JWT_SECRET || "cozyshare_secret";
 
 // helper to generate a simple invite code
@@ -21,8 +22,11 @@ router.post("/register", async (req, res) => {
   try {
     const { name, email, password, mode, householdName, inviteCode } = req.body;
 
+    // 1) basic validation
     if (!name || !email || !password) {
-      return res.status(400).json({ message: "Name, email and password are required" });
+      return res
+        .status(400)
+        .json({ message: "Name, email and password are required" });
     }
 
     const existing = await User.findOne({ email });
@@ -32,6 +36,7 @@ router.post("/register", async (req, res) => {
 
     let householdCode = null;
 
+    // 2) create new household
     if (mode === "create") {
       if (!householdName) {
         return res
@@ -39,7 +44,7 @@ router.post("/register", async (req, res) => {
           .json({ message: "Household name is required to create a household" });
       }
 
-      // generate unique code (simple approach)
+      // generate unique code
       let code = generateHouseholdCode();
       let existingHousehold = await Household.findOne({ code });
 
@@ -54,6 +59,8 @@ router.post("/register", async (req, res) => {
       });
 
       householdCode = household.code;
+
+      // 3) join existing household
     } else if (mode === "join") {
       if (!inviteCode) {
         return res
@@ -68,10 +75,11 @@ router.post("/register", async (req, res) => {
 
       householdCode = household.code;
     } else {
-      // fallback: allow user without household (optional)
+      // optional: user without household
       householdCode = null;
     }
 
+    // 4) create user
     const hashedPassword = await bcrypt.hash(password, 10);
 
     const user = await User.create({
@@ -103,7 +111,9 @@ router.post("/login", async (req, res) => {
     const { email, password } = req.body;
 
     if (!email || !password) {
-      return res.status(400).json({ message: "Email and password are required" });
+      return res
+        .status(400)
+        .json({ message: "Email and password are required" });
     }
 
     const user = await User.findOne({ email });

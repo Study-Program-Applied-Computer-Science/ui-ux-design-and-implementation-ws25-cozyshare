@@ -2,8 +2,16 @@ const mongoose = require("mongoose");
 
 const householdSchema = new mongoose.Schema(
   {
-    name: { type: String, required: true },
-    code: { type: String, required: true, unique: true }, // invite code
+    name: {
+      type: String,
+      required: true,
+    },
+    // unique invite code (e.g. EXNY2S)
+    code: {
+      type: String,
+      required: true,
+      unique: true,
+    },
   },
   { timestamps: true }
 );

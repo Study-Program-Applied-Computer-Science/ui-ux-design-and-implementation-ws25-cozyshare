@@ -45,7 +45,7 @@
 
 <script>
 import axios from 'axios'
-import ChoreItem from '../components/ChoreItem.vue'
+import ChoreItem from '../components/chores/ChoreItem.vue'
 
 export default {
   name: 'Chores',

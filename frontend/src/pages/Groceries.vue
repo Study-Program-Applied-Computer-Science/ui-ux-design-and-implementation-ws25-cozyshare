@@ -86,7 +86,7 @@
 
 <script>
 import axios from 'axios'
-import GroceryItem from '../components/GroceryItem.vue'
+import GroceryItem from '../components/groceries/GroceryItem.vue'
 
 export default {
   name: 'Groceries',
