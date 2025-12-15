@@ -1,6 +1,6 @@
 <template>
   <footer class="footer">
-    <p>CozyShare · Make shared living easier 💙</p>
+    <p>CozyShare · Live together, manage better 💙</p>
   </footer>
 </template>
 
@@ -16,7 +16,7 @@ export default {
   padding: 0.8rem;
   font-size: 0.8rem;
   color: var(--text-light);
-  background: #f9fafb;
+  background: var(--pink);
   border-top: 1px solid #e5e7eb;
 }
 </style>

@@ -3,9 +3,10 @@ import { createRouter, createWebHistory } from 'vue-router'
 import store from '../store'
 
 import Home from '../pages/Home.vue'
-import Chores from '../pages/Chores.vue'
+import Chores from '../pages/chores.vue'
 import Groceries from '../pages/Groceries.vue'
-import Login from '../pages/Login.vue' // we’ll adapt your existing Login.vue into pages/
+import Expenses from '../pages/Expenses.vue'
+import Login from '../pages/Login.vue'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -27,12 +28,17 @@ const router = createRouter({
       component: Groceries,
       meta: { requiresAuth: true },
     },
+    {
+      path: '/expenses',
+      component: Expenses,
+      meta: { requiresAuth: true },
+    },
     // 404 fallback
     { path: '/:notFound(.*)', redirect: '/' },
   ],
 })
 
-// auth guard – same idea as ShopAdmin
+// auth guard
 router.beforeEach((to, from, next) => {
   if (!store.getters.isAuthenticated) {
     // try restoring from localStorage

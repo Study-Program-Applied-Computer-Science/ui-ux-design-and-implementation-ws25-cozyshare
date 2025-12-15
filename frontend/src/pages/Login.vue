@@ -25,7 +25,7 @@
       </p>
 
       <p class="subtitle">
-        <span v-if="mode === 'login'"> Welcome back Log in to your CozyShare household. </span>
+        <span v-if="mode === 'login'"> Welcome back! Please login to your account. </span>
         <span v-else> Create a new household or join one using an invite code. </span>
       </p>
 

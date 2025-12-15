@@ -2,15 +2,12 @@
   <article
     class="chore-item"
     :class="[`chore-item--${variant}`, { 'chore-item--completed': chore.completed }]"
-    @click="handleOpen"
   >
-    <div class="chore-main">
+    <div class="chore-main" @click="handleOpen">
       <div class="title-row">
         <h4 class="title">
           {{ chore.title }}
         </h4>
-
-        <span v-if="chore.completed" class="status-pill"> ✅ Done </span>
       </div>
 
       <p v-if="showMetaLine" class="meta">
@@ -32,22 +29,14 @@
     </div>
 
     <div class="actions" @click.stop>
-      <!-- Main button for "my" variant -->
-      <button v-if="showMarkButton" class="mark-btn" :disabled="!canMark" @click="handleMarkDone">
-        <span v-if="chore.completed">✅ Done</span>
-        <span v-else>Mark done</span>
-      </button>
-
-      <!-- Small icon button for sidebar / compact -->
       <button
-        v-else-if="variant !== 'my'"
-        class="small-icon-btn"
-        :disabled="!canMark"
-        @click="handleMarkDone"
-        title="Mark as done"
+        v-if="canMark"
+        class="toggle-btn"
+        :class="{ completed: chore.completed }"
+        @click="handleToggleDone"
       >
-        <span v-if="chore.completed">✅</span>
-        <span v-else>✔️</span>
+        <span v-if="chore.completed">✓</span>
+        <span v-else>○</span>
       </button>
     </div>
   </article>
@@ -66,7 +55,6 @@ export default {
       type: Object,
       default: null,
     },
-    // visual style: "my" | "sidebar" | "compact"
     variant: {
       type: String,
       default: 'my',
@@ -86,10 +74,6 @@ export default {
     showDescription: {
       type: Boolean,
       default: false,
-    },
-    showMarkButton: {
-      type: Boolean,
-      default: true,
     },
   },
 
@@ -111,17 +95,6 @@ export default {
       return this.showAssignee || this.showFrequency || this.showDate
     },
 
-    /* canMark() {
-      if (!this.currentUser) return false
-      const me = this.currentUser.email || this.currentUser.name
- 
-      const isCreator = this.chore.createdBy === me
-      const isAssignee = this.chore.assignedTo && this.chore.assignedTo === me
- 
-      // only creator or assignee can tap "mark done"
-      return isCreator || isAssignee
-    }, */
-
     canMark() {
       if (!this.currentUser) return false
 
@@ -139,7 +112,7 @@ export default {
   },
 
   methods: {
-    handleMarkDone() {
+    handleToggleDone() {
       if (!this.canMark) return
       this.$emit('mark-done', this.chore._id)
     },
@@ -156,19 +129,23 @@ export default {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  gap: 8px;
+  gap: 12px;
   padding: 10px 12px;
   border-radius: 14px;
   background: var(--primary-light);
   border: 1px solid var(--card-border);
   box-shadow: var(--soft-shadow);
-  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.chore-item:hover {
+  border-color: var(--primary);
+  box-shadow: 0 2px 8px rgba(255, 159, 147, 0.15);
 }
 
 /* variants */
-
 .chore-item--my {
-  background: linear-gradient(135deg, var(--primary-light), rgba(253, 230, 230, 0.9));
+  background: var(--primary-light);
 }
 
 .chore-item--sidebar {
@@ -183,13 +160,18 @@ export default {
 }
 
 .chore-item--completed {
-  opacity: 0.75;
+  opacity: 0.65;
+}
+
+.chore-item--completed .chore-title {
+  text-decoration: line-through;
+  color: var(--text-light);
 }
 
 /* content */
-
 .chore-main {
   flex: 1;
+  cursor: pointer;
 }
 
 .title-row {
@@ -204,18 +186,11 @@ export default {
   font-size: 0.9rem;
   font-weight: 700;
   color: var(--navy);
-}
-
-.status-pill {
-  font-size: 0.7rem;
-  padding: 2px 6px;
-  border-radius: 999px;
-  background: white;
-  border: 1px solid rgba(148, 163, 184, 0.5);
+  transition: all 0.2s;
 }
 
 .meta {
-  margin: 2px 0 0;
+  margin: 4px 0 0;
   font-size: 0.75rem;
   color: var(--text-light);
 }
@@ -227,32 +202,42 @@ export default {
 }
 
 /* actions */
-
 .actions {
   display: flex;
   align-items: center;
+  padding-top: 2px;
 }
 
-.mark-btn {
-  border-radius: 999px;
-  border: none;
-  padding: 4px 10px;
-  font-size: 0.75rem;
+.toggle-btn {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 2px solid #d1d5db;
   background: white;
-  color: var(--navy);
+  display: flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
+  font-size: 1rem;
+  transition: all 0.2s;
+  color: #d1d5db;
 }
 
-.mark-btn:disabled,
-.small-icon-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+.toggle-btn:hover {
+  border-color: var(--primary);
+  background: var(--primary-light);
+  transform: scale(1.1);
 }
 
-.small-icon-btn {
-  border: none;
-  background: transparent;
-  cursor: pointer;
-  font-size: 0.85rem;
+.toggle-btn.completed {
+  border-color: #10b981;
+  background: #10b981;
+  color: white;
+}
+
+.toggle-btn.completed:hover {
+  border-color: #059669;
+  background: #059669;
 }
 </style>

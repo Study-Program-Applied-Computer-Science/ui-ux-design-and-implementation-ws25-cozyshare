@@ -114,6 +114,7 @@ export default {
       notices: [],
       allGroceries: [],
       allChores: [],
+      allExpenses: [],
       isLoading: false,
       errorMessage: '',
     }
@@ -190,12 +191,25 @@ export default {
       this.allChores = res.data || []
     },
 
+    async fetchExpenses() {
+      if (!this.householdCode) return
+      const res = await axios.get('http://localhost:5000/api/expenses', {
+        params: { householdCode: this.householdCode },
+      })
+      this.allExpenses = res.data || []
+    },
+
     async fetchAll() {
       if (!this.householdCode) return
       this.isLoading = true
       this.errorMessage = ''
       try {
-        await Promise.all([this.fetchNotices(), this.fetchGroceries(), this.fetchChores()])
+        await Promise.all([
+          this.fetchNotices(),
+          this.fetchGroceries(),
+          this.fetchChores(),
+          this.fetchExpenses(),
+        ])
       } catch (err) {
         console.error('Error fetching dashboard data', err)
         this.errorMessage = err.response?.data?.message || 'Error loading household data.'

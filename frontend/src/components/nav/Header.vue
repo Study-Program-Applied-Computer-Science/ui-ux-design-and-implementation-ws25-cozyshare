@@ -16,6 +16,9 @@
         <li>
           <router-link to="/groceries" active-class="active">Groceries</router-link>
         </li>
+        <li>
+          <router-link to="/expenses" active-class="active">Expenses</router-link>
+        </li>
       </ul>
     </nav>
 
