@@ -1,111 +1,133 @@
 <template>
-  <div class="grocery-card" :class="{ purchased: grocery.isPurchased }">
-    <div class="card-main">
-      <div class="left">
-        <div class="name-row">
-          <span class="name">{{ grocery.name }}</span>
-          <span class="badge">{{ grocery.category || 'Other' }}</span>
-        </div>
-        <p class="meta">
-          Qty: <strong>{{ grocery.quantity || '1' }}</strong>
-        </p>
-        <p class="meta">
-          Added by <strong>{{ grocery.addedBy }}</strong>
-        </p>
+  <article class="grocery-item" :class="{ purchased: grocery.isPurchased }">
+    <div class="left">
+      <div class="top-line">
+        <span class="name">{{ grocery.name }}</span>
+
+        <span class="category-pill">
+          {{ grocery.category || "Other" }}
+        </span>
       </div>
 
-      <div class="right">
-        <button class="btn tiny" @click="$emit('toggle', grocery._id)">
-          {{ grocery.isPurchased ? 'Undo' : 'Purchased' }}
-        </button>
-        <button class="icon-btn danger" @click="$emit('delete', grocery._id)">🗑</button>
-      </div>
+      <p class="details">
+        <span v-if="grocery.quantity">
+          Qty: {{ grocery.quantity }}
+        </span>
+        <span v-if="grocery.addedBy">
+          · Added by {{ grocery.addedBy }}
+        </span>
+        <span v-if="grocery.isPurchased && grocery.purchasedBy">
+          · Purchased by {{ grocery.purchasedBy }}
+        </span>
+      </p>
     </div>
-  </div>
+
+    <div class="right">
+      <button class="toggle-btn" @click.stop="toggle">
+        <span v-if="grocery.isPurchased">✅ Purchased</span>
+        <span v-else>Mark purchased</span>
+      </button>
+
+      <button class="delete-btn" @click.stop="remove" title="Remove item">
+        🗑
+      </button>
+    </div>
+  </article>
 </template>
 
 <script>
 export default {
-  name: 'GroceryItem',
+  name: "GroceryItem",
+
   props: {
-    grocery: Object,
+    grocery: {
+      type: Object,
+      required: true,
+    },
   },
-}
+
+  emits: ["toggle", "delete"],
+
+  methods: {
+    toggle() {
+      this.$emit("toggle", this.grocery._id);
+    },
+    remove() {
+      this.$emit("delete", this.grocery._id);
+    },
+  },
+};
 </script>
 
 <style scoped>
-.grocery-card {
-  border-radius: 14px;
-  padding: 10px 12px;
-  margin-bottom: 10px;
-  background: linear-gradient(135deg, #eef2ff, #fdf2ff);
-  border: 1px solid #e5e7eb;
-}
-
-.grocery-card.purchased {
-  opacity: 0.7;
-  background: #ecfdf3;
-}
-
-.card-main {
+.grocery-item {
   display: flex;
   justify-content: space-between;
+  align-items: flex-start;
   gap: 10px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  border-radius: 16px;
+  background: var(--primary-light);
+  border: 1px solid var(--card-border);
+  box-shadow: var(--soft-shadow);
+}
+
+.grocery-item.purchased {
+  opacity: 0.7;
 }
 
 .left {
   flex: 1;
 }
 
-.name-row {
+.top-line {
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
 .name {
-  font-weight: 600;
-  font-size: 1rem;
+  font-weight: 700;
+  color: var(--navy);
+  font-size: 0.95rem;
 }
 
-.badge {
+.category-pill {
+  font-size: 0.75rem;
   padding: 2px 8px;
   border-radius: 999px;
-  background: #f97316;
-  color: white;
-  font-size: 0.75rem;
+  background: #fff;
+  border: 1px solid rgba(148, 163, 184, 0.5);
 }
 
-.meta {
-  margin: 3px 0;
-  font-size: 0.85rem;
-  color: #4b5563;
+.details {
+  margin: 3px 0 0;
+  font-size: 0.8rem;
+  color: var(--text-light);
 }
 
 .right {
   display: flex;
   flex-direction: column;
-  align-items: flex-end;
-  gap: 6px;
+  gap: 4px;
 }
 
-.btn.tiny {
-  padding: 4px 8px;
-  font-size: 0.8rem;
+.toggle-btn {
   border-radius: 999px;
   border: none;
+  padding: 4px 10px;
+  font-size: 0.75rem;
+  background: #fff;
+  color: var(--navy);
   cursor: pointer;
-  background: #22c55e;
-  color: white;
 }
 
-.icon-btn {
+.delete-btn {
+  padding: 0;
   border: none;
   background: transparent;
   cursor: pointer;
-}
-
-.icon-btn.danger {
-  color: #b91c1c;
+  font-size: 0.9rem;
 }
 </style>
