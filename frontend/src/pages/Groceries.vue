@@ -77,13 +77,16 @@
     <!-- CURRENT LIST -->
     <div v-if="activeTab === 'list'" class="card list-card">
       <h3>Shared grocery list</h3>
-      <p class="list-subtitle">
-        Only pending items appear here. Purchased items go to history.
-      </p>
+      <p class="list-subtitle">Only pending items appear here. Purchased items go to history.</p>
 
       <!-- FILTER BAR (NO Purchased option anymore) -->
       <div class="filter-bar">
-        <input v-model="searchText" type="text" class="filter-input" placeholder="Search groceries…" />
+        <input
+          v-model="searchText"
+          type="text"
+          class="filter-input"
+          placeholder="Search groceries…"
+        />
 
         <select v-model="filterCategory" class="filter-select">
           <option value="All">All categories</option>
@@ -117,9 +120,7 @@
     <!-- HISTORY -->
     <div v-else class="card list-card">
       <h3>Grocery history</h3>
-      <p class="list-subtitle">
-        Recently purchased items appear here.
-      </p>
+      <p class="list-subtitle">Recently purchased items appear here.</p>
 
       <div v-if="isLoadingHistory" class="loading">Loading history…</div>
 
