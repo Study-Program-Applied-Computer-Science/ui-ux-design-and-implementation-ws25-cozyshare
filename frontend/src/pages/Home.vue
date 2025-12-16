@@ -1,16 +1,15 @@
 <template>
   <section class="home">
     <!-- HEADER + REFRESH -->
-    <div class="nb-header">
+    <div class="home-header">
       <div>
-        <h2>Home / NoticeBoard</h2>
-        <p class="subtitle">Share updates with your flat so nothing gets lost in chats</p>
+        <h2>Home Dashboard</h2>
+        <p class="subtitle">Stay updated with your household</p>
         <!-- <p class="household-line">
           Household code:
           <strong>{{ householdCode || 'N/A' }}</strong>
         </p> -->
       </div>
-      <button class="refresh-btn" @click="fetchAll">Refresh</button>
     </div>
 
     <!-- STATS STRIP -->
@@ -39,62 +38,79 @@
     </div>
 
     <!-- ADD NEW NOTICE -->
-    <div class="card add-card">
-      <h3>Create a new post</h3>
+    <div class="card notices-card">
+      <div class="section-header">
+        <h3>Notice Board</h3>
+      </div>
       <form class="add-form" @submit.prevent="onSubmit">
         <div class="form-row">
           <div class="form-control">
-            <label>Title</label>
+            <label>Title *</label>
             <input
               v-model="title"
               type="text"
               placeholder="e.g. Inspection tomorrow, Party tonight..."
+              required
+              autofocus
             />
           </div>
         </div>
 
         <div class="form-row">
           <div class="form-control">
-            <label>Message</label>
+            <label>Message *</label>
             <textarea
               v-model="message"
-              rows="3"
-              placeholder="Add the details you want your flatmates to know."
+              rows="4"
+              placeholder="Add the details you want your flatmates to know..."
+              required
             ></textarea>
           </div>
         </div>
 
-        <p v-if="errorMessage" class="error-msg">{{ errorMessage }}</p>
+        <p v-if="errorMessage" class="error-msg">
+          <span class="error-icon">⚠</span> {{ errorMessage }}
+        </p>
 
         <div class="form-actions">
-          <button type="submit" class="btn-primary">Post to NoticeBoard</button>
+          <button type="submit" class="btn-primary">Post Notice</button>
         </div>
       </form>
     </div>
 
     <!-- NOTICES LIST -->
-    <div class="card list-card">
-      <div class="list-header">
-        <h3>Recent Notices</h3>
-        <p class="list-subtitle">Latest updates from everyone in your household.</p>
+    <div class="notices-section">
+      <div class="card notices-card">
+        <div class="section-header">
+          <div>
+            <h3>Notice Board</h3>
+            <p class="section-subtitle">Latest updates from your household</p>
+          </div>
+          <button class="refresh-btn" @click="fetchAll" title="Refresh">🔄</button>
+        </div>
+
+        <div v-if="isLoading" class="loading-state">
+          <p>Loading notices...</p>
+        </div>
+
+        <div v-else-if="notices.length > 0" class="notices-list">
+          <NoticeItem
+            v-for="notice in notices"
+            :key="notice._id"
+            :notice="notice"
+            :currentUser="currentUser"
+            @toggle-like="handleToggleLike"
+            @add-comment="handleAddComment"
+            @edit="handleEdit"
+            @delete="handleDelete"
+          />
+        </div>
+
+        <div v-else class="empty-state">
+          <span class="empty-emoji">📢</span>
+          <p>No notices yet. Be the first to post!</p>
+        </div>
       </div>
-
-      <div v-if="isLoading" class="loading">Loading your household feed…</div>
-
-      <div v-else-if="notices.length > 0" class="notices-list">
-        <NoticeItem
-          v-for="notice in notices"
-          :key="notice._id"
-          :notice="notice"
-          :currentUser="currentUser"
-          @toggle-like="handleToggleLike"
-          @add-comment="handleAddComment"
-          @edit="handleEdit"
-          @delete="handleDelete"
-        />
-      </div>
-
-      <p v-else class="empty-message">No notices yet. Be the first to post something nice!</p>
     </div>
   </section>
 </template>
@@ -391,39 +407,21 @@ export default {
 }
 
 /* HEADER */
-.nb-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 12px;
+.home-header {
+  margin-bottom: 24px;
 }
 
-.nb-header h2 {
+.home-header h2 {
   margin: 0;
   color: var(--navy);
+  font-size: 2rem;
+  font-weight: 700;
 }
 
 .subtitle {
-  margin: 2px 0 0;
+  margin: 6px 0 0;
+  font-size: 1rem;
   color: var(--text-light);
-  font-size: 0.9rem;
-}
-
-.household-line {
-  margin: 2px 0 0;
-  font-size: 0.85rem;
-  color: var(--text-light);
-}
-
-.refresh-btn {
-  border: none;
-  border-radius: 999px;
-  padding: 6px 12px;
-  background: var(--primary-light);
-  color: var(--navy);
-  cursor: pointer;
-  font-size: 0.85rem;
 }
 
 /* STATS */
@@ -481,42 +479,106 @@ export default {
 
 /* FORM */
 .add-form {
-  margin-top: 4px;
+  margin-top: 8px;
 }
 
 .form-row {
-  margin-bottom: 10px;
+  margin-bottom: 20px;
 }
 
 .form-control label {
   display: block;
-  font-size: 0.85rem;
-  color: var(--text-light);
+  font-size: 0.9rem;
+  color: var(--navy);
+  font-weight: 600;
+  margin-bottom: 8px;
 }
 
 .form-control input,
 .form-control textarea {
   width: 100%;
-  margin-top: 4px;
-  padding: 8px 10px;
-  border-radius: 10px;
-  border: 1px solid #d1d5db;
-  font-size: 0.9rem;
+  padding: 12px 16px;
+  border-radius: 12px;
+  border: 2px solid #e5e7eb;
+  font-size: 0.95rem;
+  transition: all 0.2s;
+  font-family: inherit;
+}
+
+.form-control input:focus,
+.form-control textarea:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(0, 48, 73, 0.1);
+}
+
+.form-control textarea {
+  resize: vertical;
+  min-height: 100px;
 }
 
 .form-actions {
   display: flex;
   justify-content: flex-end;
+  gap: 12px;
+  margin-top: 28px;
+  padding-top: 20px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.btn-primary,
+.btn-secondary {
+  border: none;
+  border-radius: 12px;
+  padding: 12px 24px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 1rem;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .btn-primary {
-  border: none;
-  border-radius: 999px;
-  padding: 8px 16px;
-  background: linear-gradient(135deg, var(--primary), var(--peach));
+  background: linear-gradient(135deg, var(--primary), var(--primary-light));
   color: #ffffff;
-  cursor: pointer;
-  font-weight: 600;
+  box-shadow: 0 4px 12px rgba(0, 48, 73, 0.2);
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 48, 73, 0.3);
+}
+
+.btn-secondary {
+  background: #f3f4f6;
+  color: var(--navy);
+}
+
+.btn-secondary:hover {
+  background: #e5e7eb;
+}
+
+.btn-icon {
+  font-size: 1.2rem;
+}
+
+.error-msg {
+  margin-top: 12px;
+  padding: 12px 16px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 12px;
+  font-size: 0.9rem;
+  color: #b91c1c;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.error-icon {
+  font-size: 1.1rem;
 }
 
 /* LIST */
@@ -545,5 +607,76 @@ export default {
   margin-top: 4px;
   font-size: 0.8rem;
   color: #b91c1c;
+}
+
+.notices-section {
+  min-width: 0;
+}
+
+.notices-card {
+  padding: 20px;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 16px;
+}
+
+.section-header h3 {
+  margin: 0 0 4px;
+  color: var(--navy);
+  font-size: 1.3rem;
+  font-weight: 700;
+}
+
+.section-subtitle {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--text-light);
+}
+
+.refresh-btn {
+  background: transparent;
+  border: none;
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 8px;
+  transition: all 0.2s;
+}
+
+.refresh-btn:hover {
+  background: var(--primary-light);
+}
+
+.loading-state {
+  text-align: center;
+  padding: 48px 16px;
+  color: var(--text-light);
+}
+
+.empty-state {
+  text-align: center;
+  padding: 48px 16px;
+}
+
+.empty-emoji {
+  font-size: 3rem;
+  display: block;
+  margin-bottom: 12px;
+}
+
+.empty-state p {
+  margin: 0;
+  font-size: 0.95rem;
+  color: var(--text-light);
+}
+
+.notices-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 </style>
