@@ -5,17 +5,13 @@
         <span class="name">{{ grocery.name }}</span>
 
         <span class="category-pill">
-          {{ grocery.category || "Other" }}
+          {{ grocery.category || 'Other' }}
         </span>
       </div>
 
       <p class="details">
-        <span v-if="grocery.quantity">
-          Qty: {{ grocery.quantity }}
-        </span>
-        <span v-if="grocery.addedBy">
-          · Added by {{ grocery.addedBy }}
-        </span>
+        <span v-if="grocery.quantity"> Qty: {{ grocery.quantity }} </span>
+        <span v-if="grocery.addedBy"> · Added by {{ grocery.addedBy }} </span>
         <span v-if="grocery.isPurchased && grocery.purchasedBy">
           · Purchased by {{ grocery.purchasedBy }}
         </span>
@@ -28,16 +24,14 @@
         <span v-else>Mark purchased</span>
       </button>
 
-      <button class="delete-btn" @click.stop="remove" title="Remove item">
-        🗑
-      </button>
+      <button class="delete-btn" @click.stop="remove" title="Remove item">🗑</button>
     </div>
   </article>
 </template>
 
 <script>
 export default {
-  name: "GroceryItem",
+  name: 'GroceryItem',
 
   props: {
     grocery: {
@@ -46,17 +40,17 @@ export default {
     },
   },
 
-  emits: ["toggle", "delete"],
+  emits: ['toggle', 'delete'],
 
   methods: {
     toggle() {
-      this.$emit("toggle", this.grocery._id);
+      this.$emit('toggle', this.grocery._id)
     },
     remove() {
-      this.$emit("delete", this.grocery._id);
+      this.$emit('delete', this.grocery._id)
     },
   },
-};
+}
 </script>
 
 <style scoped>

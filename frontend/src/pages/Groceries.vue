@@ -74,7 +74,7 @@
           v-model="searchText"
           type="text"
           class="filter-input"
-          placeholder="🔍 Search items..."
+          placeholder="Search groceries…"
         />
 
         <select v-model="filterCategory" class="filter-select">
@@ -119,11 +119,8 @@
 
     <!-- HISTORY -->
     <div v-else class="card list-card">
-      <div class="list-header">
-        <h3>Purchase History</h3>
-        <button class="refresh-btn" @click="fetchHistory" title="Refresh">🔄</button>
-      </div>
-      <p class="list-subtitle">Recently purchased items from the past 30 days.</p>
+      <h3>Grocery history</h3>
+      <p class="list-subtitle">Recently purchased items appear here.</p>
 
       <div v-if="isLoadingHistory" class="loading-state">
         <p>Loading history...</p>

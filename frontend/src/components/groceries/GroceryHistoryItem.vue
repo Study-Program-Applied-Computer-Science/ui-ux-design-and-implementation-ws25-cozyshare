@@ -3,7 +3,7 @@
     <div class="left">
       <div class="title-row">
         <span class="name">{{ item.name }}</span>
-        <span class="category-pill">{{ item.category || "Other" }}</span>
+        <span class="category-pill">{{ item.category || 'Other' }}</span>
       </div>
 
       <p class="details">
@@ -23,7 +23,7 @@
 
 <script>
 export default {
-  name: "GroceryHistoryItem",
+  name: 'GroceryHistoryItem',
   props: {
     item: {
       type: Object,
@@ -32,11 +32,11 @@ export default {
   },
   computed: {
     purchasedLabel() {
-      if (!this.item.purchasedAt) return "";
-      return new Date(this.item.purchasedAt).toLocaleString();
+      if (!this.item.purchasedAt) return ''
+      return new Date(this.item.purchasedAt).toLocaleString()
     },
   },
-};
+}
 </script>
 
 <style scoped>

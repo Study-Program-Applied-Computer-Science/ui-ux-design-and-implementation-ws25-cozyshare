@@ -273,44 +273,64 @@ export default {
     handleLike({ id, likes }) {
       this.notices = this.notices.map((n) => (n._id === id ? { ...n, likes } : n))
     },
-    handleToggleLike(id) {
+    async handleToggleLike(id) {
       if (!this.currentUser) return
 
       const me = this.currentUser.email || this.currentUser.name
 
+      // instant UI update (optimistic)
       this.notices = this.notices.map((n) => {
         if (n._id !== id) return n
-
         const currentLikes = Array.isArray(n.likes) ? n.likes : []
         const alreadyLiked = currentLikes.includes(me)
-
-        const newLikes = alreadyLiked
-          ? currentLikes.filter((u) => u !== me) // unlike
-          : [...currentLikes, me] // like
-
-        return {
-          ...n,
-          likes: newLikes,
-        }
+        const newLikes = alreadyLiked ? currentLikes.filter((u) => u !== me) : [...currentLikes, me]
+        return { ...n, likes: newLikes }
       })
+
+      // persist to backend so it won't disappear on tab switch
+      try {
+        const res = await axios.patch(`http://localhost:5000/api/notices/${id}/like`, {
+          user: me,
+        })
+
+        // sync the final likes from server
+        this.notices = this.notices.map((n) =>
+          n._id === id ? { ...n, likes: res.data.likes || [] } : n,
+        )
+      } catch (err) {
+        console.error('Like save failed', err)
+        // fallback: reload correct state
+        this.fetchNotices()
+      }
     },
-    handleAddComment({ id, text }) {
+
+    async handleAddComment({ id, text }) {
       if (!this.currentUser) return
+
       const author = this.currentUser.name || this.currentUser.email
 
+      // instant UI update
       this.notices = this.notices.map((n) => {
         if (n._id !== id) return n
         const existing = Array.isArray(n.comments) ? n.comments : []
-        return {
-          ...n,
-          comments: [...existing, { author, text }],
-        }
+        return { ...n, comments: [...existing, { author, text }] }
       })
 
-      // optionally: POST to backend to save the comment
-      // await axios.post(`http://localhost:5000/api/notices/${id}/comments`, { author, text })
-    },
+      // persist to backend so it won't disappear
+      try {
+        const res = await axios.post(`http://localhost:5000/api/notices/${id}/comments`, {
+          author,
+          text,
+        })
 
+        this.notices = this.notices.map((n) =>
+          n._id === id ? { ...n, comments: res.data.comments || [] } : n,
+        )
+      } catch (err) {
+        console.error('Comment save failed', err)
+        this.fetchNotices()
+      }
+    },
     handleComment({ id, comments }) {
       this.notices = this.notices.map((n) => (n._id === id ? { ...n, comments } : n))
     },
@@ -335,8 +355,27 @@ export default {
         alert('Error updating notice')
       }
     },
-  },
 
+    async handleDelete(id) {
+      if (!this.currentUser) return
+
+      const me = this.currentUser.name || this.currentUser.email
+
+      // UI remove instantly
+      const backup = [...this.notices]
+      this.notices = this.notices.filter((n) => n._id !== id)
+
+      try {
+        await axios.delete(`http://localhost:5000/api/notices/${id}`, {
+          data: { user: me }, // IMPORTANT: backend needs this for "only author can delete"
+        })
+      } catch (err) {
+        console.error('Delete failed', err)
+        alert(err.response?.data?.message || 'Delete failed')
+        this.notices = backup // restore if delete rejected
+      }
+    },
+  },
   mounted() {
     if (this.isAuthenticated && this.householdCode) {
       this.fetchAll()

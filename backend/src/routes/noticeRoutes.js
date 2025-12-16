@@ -97,6 +97,8 @@ router.patch("/:id/like", async (req, res) => {
   }
 });
 
+
+
 // POST /api/notices/:id/comments  (add comment)
 router.post("/:id/comments", async (req, res) => {
   try {
@@ -121,13 +123,26 @@ router.post("/:id/comments", async (req, res) => {
   }
 });
 
-// DELETE /api/notices/:id
+// DELETE /api/notices/:id  (only author can delete)
 router.delete("/:id", async (req, res) => {
   try {
-    const notice = await Notice.findByIdAndDelete(req.params.id);
+    const { user } = req.body; // name or email from frontend
+
+    if (!user) {
+      return res.status(400).json({ message: "user is required" });
+    }
+
+    const notice = await Notice.findById(req.params.id);
     if (!notice) {
       return res.status(404).json({ message: "Notice not found" });
     }
+
+    // Only author can delete
+    if (notice.author !== user) {
+      return res.status(403).json({ message: "Only author can delete this post" });
+    }
+
+    await Notice.findByIdAndDelete(req.params.id);
 
     res.json({ message: "Notice deleted" });
   } catch (err) {
@@ -135,5 +150,6 @@ router.delete("/:id", async (req, res) => {
     res.status(500).json({ message: "Error deleting notice" });
   }
 });
+
 
 module.exports = router;
