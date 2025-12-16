@@ -24,12 +24,16 @@ const choreSchema = new mongoose.Schema(
 			default: "once",
 		},
 
-		// completion info (for one-time chores)
+		// completion info
 		completed: { type: Boolean, default: false },
 		completedAt: { type: Date },
 		completedBy: { type: String },
 
-		// optional: track last done for recurring chores
+		// For recurring chores: track which chore this was created from
+		// This helps us identify and remove the "next instance" when undoing
+		parentChoreId: { type: mongoose.Schema.Types.ObjectId, ref: "Chore" },
+
+		// optional: track last done for recurring chores (for history/analytics)
 		lastCompletedAt: { type: Date },
 		lastCompletedBy: { type: String },
 	},

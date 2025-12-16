@@ -5,22 +5,20 @@
   >
     <div class="chore-main" @click="handleOpen">
       <div class="title-row">
-        <h4 class="title">
-          {{ chore.title }}
-        </h4>
+        <h4 class="title">{{ chore.title }}</h4>
       </div>
 
       <p v-if="showMetaLine" class="meta">
         <span v-if="showAssignee">
-          <template v-if="chore.assignedTo"> Assigned to {{ chore.assignedTo }} </template>
-          <template v-else> Shared chore </template>
+          <template v-if="chore.assignedTo">Assigned to {{ chore.assignedTo }}</template>
+          <template v-else>Shared chore</template>
         </span>
 
         <span v-if="showFrequency && chore.frequency && chore.frequency !== 'once'">
-          · {{ chore.frequency }}
+          · 🔄 {{ chore.frequency }}
         </span>
 
-        <span v-if="showDate && dueDateLabel"> · Due {{ dueDateLabel }} </span>
+        <span v-if="showDate && dueDateLabel">· Due {{ dueDateLabel }}</span>
       </p>
 
       <p v-if="showDescription && chore.description" class="description">
@@ -30,13 +28,30 @@
 
     <div class="actions" @click.stop>
       <button
-        v-if="canMark"
+        v-if="canMark && !chore.completed"
         class="toggle-btn"
-        :class="{ completed: chore.completed }"
         @click="handleToggleDone"
+        title="Mark as done"
       >
-        <span v-if="chore.completed">✓</span>
-        <span v-else>○</span>
+        <span>x</span>
+      </button>
+
+      <button
+        v-else-if="canMark && chore.completed && !canUndo"
+        class="toggle-btn completed"
+        @click="handleToggleDone"
+        title="Mark as incomplete"
+      >
+        <span>✓</span>
+      </button>
+
+      <button
+        v-else-if="canMark && chore.completed && canUndo"
+        class="toggle-btn undo"
+        @click="handleUndo"
+        title="Undo completion"
+      >
+        <span>↩️</span>
       </button>
     </div>
   </article>
@@ -45,15 +60,15 @@
 <script>
 export default {
   name: 'ChoreItem',
-
   props: {
     chore: {
       type: Object,
       required: true,
     },
+    isCurrentWeek: Boolean,
     currentUser: {
-      type: Object,
-      default: null,
+      type: [String, Object],
+      default: '',
     },
     variant: {
       type: String,
@@ -76,9 +91,12 @@ export default {
       default: false,
     },
   },
-
-  emits: ['mark-done', 'open'],
-
+  emits: ['mark-done', 'undo', 'open'],
+  data() {
+    return {
+      completedAt: null,
+    }
+  },
   computed: {
     dueDateLabel() {
       if (!this.chore.dueDate) return ''
@@ -90,33 +108,53 @@ export default {
         day: 'numeric',
       })
     },
-
     showMetaLine() {
       return this.showAssignee || this.showFrequency || this.showDate
     },
-
     canMark() {
       if (!this.currentUser) return false
 
-      const meEmail = (this.currentUser.email || '').toLowerCase()
-      const meName = (this.currentUser.name || '').toLowerCase()
+      const userStr =
+        typeof this.currentUser === 'string'
+          ? this.currentUser
+          : this.currentUser.email || this.currentUser.name || ''
 
+      const userLower = userStr.toLowerCase()
       const created = (this.chore.createdBy || '').toLowerCase()
       const assigned = (this.chore.assignedTo || '').toLowerCase()
 
-      const isCreator = created === meEmail || created === meName
-      const isAssignee = assigned === meEmail || assigned === meName
-
-      return isCreator || isAssignee
+      // Can mark if:
+      // 1. You created it
+      // 2. You're assigned to it
+      // 3. It's a shared chore (no specific assignee)
+      return created === userLower || assigned === userLower || !this.chore.assignedTo
+    },
+    canUndo() {
+      if (!this.chore.completed || !this.completedAt) return false
+      const fiveMinutes = 5 * 60 * 1000
+      return Date.now() - this.completedAt < fiveMinutes
     },
   },
-
+  watch: {
+    'chore.completed'(newVal, oldVal) {
+      if (newVal && !oldVal) {
+        // Just marked as complete
+        this.completedAt = Date.now()
+      } else if (!newVal && oldVal) {
+        // Just marked as incomplete
+        this.completedAt = null
+      }
+    },
+  },
   methods: {
     handleToggleDone() {
       if (!this.canMark) return
-      this.$emit('mark-done', this.chore._id)
+      this.$emit('mark-done', this.chore)
     },
-
+    handleUndo() {
+      if (!this.canMark) return
+      this.$emit('undo', this.chore._id)
+    },
     handleOpen() {
       this.$emit('open', this.chore)
     },
@@ -134,7 +172,7 @@ export default {
   border-radius: 14px;
   background: var(--primary-light);
   border: 1px solid var(--card-border);
-  box-shadow: var(--soft-shadow);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
   transition: all 0.2s;
 }
 
@@ -143,7 +181,6 @@ export default {
   box-shadow: 0 2px 8px rgba(255, 159, 147, 0.15);
 }
 
-/* variants */
 .chore-item--my {
   background: var(--primary-light);
 }
@@ -163,12 +200,11 @@ export default {
   opacity: 0.65;
 }
 
-.chore-item--completed .chore-title {
+.chore-item--completed .title {
   text-decoration: line-through;
   color: var(--text-light);
 }
 
-/* content */
 .chore-main {
   flex: 1;
   cursor: pointer;
@@ -201,7 +237,6 @@ export default {
   color: var(--text-dark);
 }
 
-/* actions */
 .actions {
   display: flex;
   align-items: center;
@@ -216,7 +251,7 @@ export default {
   border: 2px solid #d1d5db;
   background: white;
   display: flex;
-  align-items: center;
+  /*align-items: center;*/
   justify-content: center;
   cursor: pointer;
   font-size: 1rem;
@@ -239,5 +274,17 @@ export default {
 .toggle-btn.completed:hover {
   border-color: #059669;
   background: #059669;
+}
+
+.toggle-btn.undo {
+  border-color: #f59e0b;
+  background: #fef3c7;
+  color: #f59e0b;
+}
+
+.toggle-btn.undo:hover {
+  border-color: #d97706;
+  background: #fde68a;
+  color: #d97706;
 }
 </style>

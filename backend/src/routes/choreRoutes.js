@@ -38,11 +38,9 @@ router.post("/", async (req, res) => {
 		} = req.body;
 
 		if (!title || !householdCode || !createdBy || !dueDate) {
-			return res
-				.status(400)
-				.json({
-					message: "Title, householdCode, createdBy and dueDate are required",
-				});
+			return res.status(400).json({
+				message: "Title, householdCode, createdBy and dueDate are required",
+			});
 		}
 
 		let due;
@@ -93,7 +91,7 @@ router.get("/", async (req, res) => {
 // ---------- TOGGLE COMPLETE ----------
 router.patch("/:id/complete", async (req, res) => {
 	try {
-		const { currentUser } = req.body; // e.g. email of logged-in user
+		const { currentUser } = req.body;
 		if (!currentUser) {
 			return res.status(400).json({ message: "currentUser is required" });
 		}
@@ -103,49 +101,116 @@ router.patch("/:id/complete", async (req, res) => {
 			return res.status(404).json({ message: "Chore not found" });
 		}
 
-		const isAssignee = chore.assignedTo && chore.assignedTo === currentUser;
-		const isCreator = chore.createdBy === currentUser;
+		const userLower = currentUser.toLowerCase();
+		const isAssignee =
+			chore.assignedTo && chore.assignedTo.toLowerCase() === userLower;
+		const isCreator = chore.createdBy.toLowerCase() === userLower;
+		const isShared = !chore.assignedTo || chore.assignedTo.trim() === "";
 
-		// only creator OR assignee is allowed
-		if (!isCreator && !isAssignee) {
+		// Allow creator, assignee, or anyone for shared chores
+		if (!isCreator && !isAssignee && !isShared) {
 			return res.status(403).json({
-				message: "Only the assignee or creator can mark this chore as done",
+				message:
+					"Only the assignee, creator, or anyone for shared chores can mark this as done",
 			});
 		}
 
 		const now = new Date();
+		let newChore = null;
+		let removedChoreId = null;
 
-		if (
-			chore.frequency === "once" ||
-			!chore.frequency ||
-			chore.frequency === "once"
-		) {
-			// simple toggle for one-time chores
+		// Check if this is a recurring chore
+		const isRecurring = chore.frequency && chore.frequency !== "once";
+
+		if (!isRecurring) {
+			// ONE-TIME CHORE: Simple toggle
 			chore.completed = !chore.completed;
 			chore.completedAt = chore.completed ? now : null;
 			chore.completedBy = chore.completed ? currentUser : null;
 		} else {
-			// recurring: record last completed and move dueDate to next occurrence
-			chore.lastCompletedAt = now;
-			chore.lastCompletedBy = currentUser;
+			// RECURRING CHORE
+			if (!chore.completed) {
+				// MARKING AS COMPLETE: Create next instance
+				chore.completed = true;
+				chore.completedAt = now;
+				chore.completedBy = currentUser;
 
-			const next = new Date(chore.dueDate || now);
+				// Calculate next due date
+				const nextDue = new Date(chore.dueDate || now);
+				if (chore.frequency === "daily") {
+					nextDue.setDate(nextDue.getDate() + 1);
+				} else if (chore.frequency === "weekly") {
+					nextDue.setDate(nextDue.getDate() + 7);
+				} else if (chore.frequency === "monthly") {
+					nextDue.setMonth(nextDue.getMonth() + 1);
+				}
 
-			if (chore.frequency === "daily") {
-				next.setDate(next.getDate() + 1);
-			} else if (chore.frequency === "weekly") {
-				next.setDate(next.getDate() + 7);
-			} else if (chore.frequency === "monthly") {
-				next.setMonth(next.getMonth() + 1);
+				// Create new instance for next occurrence
+				newChore = await Chore.create({
+					title: chore.title,
+					description: chore.description,
+					householdCode: chore.householdCode,
+					createdBy: chore.createdBy,
+					assignedTo: chore.assignedTo,
+					dueDate: nextDue,
+					frequency: chore.frequency,
+					parentChoreId: chore._id, // Track which chore this came from
+				});
+			} else {
+				// MARKING AS INCOMPLETE (UNDO): Remove next instance if it exists
+				chore.completed = false;
+				chore.completedAt = null;
+				chore.completedBy = null;
+
+				// Find and delete the next instance that was created
+				const nextInstance = await Chore.findOne({
+					parentChoreId: chore._id,
+					completed: false,
+					householdCode: chore.householdCode,
+				}).sort({ dueDate: 1 });
+
+				if (nextInstance) {
+					removedChoreId = nextInstance._id;
+					await Chore.findByIdAndDelete(nextInstance._id);
+				}
 			}
-
-			chore.dueDate = next;
 		}
 
 		await chore.save();
-		res.json(chore);
+
+		// Return response with all relevant data
+		const response = {
+			chore: chore,
+		};
+
+		if (newChore) {
+			response.newChore = newChore;
+		}
+
+		if (removedChoreId) {
+			response.removedChoreId = removedChoreId;
+		}
+
+		res.json(response);
 	} catch (err) {
 		console.error("Complete chore error:", err);
+		res.status(500).json({ message: "Server error" });
+	}
+});
+
+// ---------- DELETE CHORE ----------
+router.delete("/:id", async (req, res) => {
+	try {
+		const chore = await Chore.findById(req.params.id);
+
+		if (!chore) {
+			return res.status(404).json({ message: "Chore not found" });
+		}
+
+		await Chore.findByIdAndDelete(req.params.id);
+		res.sendStatus(204);
+	} catch (err) {
+		console.error("Delete chore error:", err);
 		res.status(500).json({ message: "Server error" });
 	}
 });

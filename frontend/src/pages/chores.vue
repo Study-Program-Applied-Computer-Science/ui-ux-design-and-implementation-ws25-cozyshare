@@ -1,6 +1,5 @@
 <template>
   <section class="chores">
-    <!-- Header -->
     <div class="chores-header">
       <div>
         <h2>Chores Planner</h2>
@@ -8,14 +7,12 @@
       </div>
     </div>
 
-    <!-- Week Controls -->
     <div class="week-controls">
-      <button class="pill-btn" @click="shiftWeek(-1)"><span class="arrow">←</span> Previous</button>
+      <button class="pill-btn" @click="shiftWeek(-1)">◀ Previous</button>
       <div class="week-label">{{ weekLabel }}</div>
-      <button class="pill-btn" @click="shiftWeek(1)">Next <span class="arrow">→</span></button>
+      <button class="pill-btn" @click="shiftWeek(1)">Next ▶</button>
     </div>
 
-    <!-- Top Cards: My chores + Upcoming -->
     <div class="top-cards">
       <div class="card sidebar-card">
         <div class="sidebar-header">
@@ -34,9 +31,11 @@
           :key="chore._id"
           :chore="chore"
           :currentUser="currentUser"
+          :isCurrentWeek="isCurrentWeek"
           variant="my"
           :showDescription="false"
-          @mark-done="handleMarkDoneFromCard"
+          @mark-done="toggleComplete"
+          @undo="undoComplete"
         />
       </div>
 
@@ -57,14 +56,15 @@
           :key="chore._id"
           :chore="chore"
           :currentUser="currentUser"
+          :isCurrentWeek="isCurrentWeek"
           variant="sidebar"
           :showDescription="false"
-          @mark-done="handleMarkDoneFromCard"
+          @mark-done="toggleComplete"
+          @undo="undoComplete"
         />
       </div>
     </div>
 
-    <!-- Weekly calendar strip -->
     <div class="week-grid card">
       <div
         v-for="day in weekDays"
@@ -83,7 +83,12 @@
             <span>No chores</span>
           </div>
 
-          <div v-for="chore in day.chores" :key="chore._id" class="chore-chip">
+          <div
+            v-for="chore in day.chores"
+            :key="chore._id"
+            class="chore-chip"
+            @click="openChoreDetails(chore)"
+          >
             <div class="chore-main">
               <span class="chore-title">{{ chore.title }}</span>
               <span class="chore-meta">
@@ -92,7 +97,7 @@
                 </span>
                 <span v-else class="shared-badge">Shared</span>
                 <span v-if="chore.frequency && chore.frequency !== 'once'" class="frequency-tag">
-                  {{ chore.frequency }}
+                  🔄 {{ chore.frequency }}
                 </span>
                 <span v-if="chore.completed" class="completed-badge">✅ Done</span>
               </span>
@@ -102,7 +107,6 @@
       </div>
     </div>
 
-    <!-- Add Chore Button -->
     <div class="add-chore-section">
       <button class="add-chore-btn" @click="showModal = true">
         <span class="plus-icon">+</span>
@@ -110,7 +114,7 @@
       </button>
     </div>
 
-    <!-- Modal for Add New Chore -->
+    <!-- Add Chore Modal -->
     <transition name="modal-fade">
       <div v-if="showModal" class="modal-overlay" @click.self="closeModal">
         <div class="modal-content">
@@ -138,7 +142,12 @@
             <div class="form-row two-cols">
               <div class="form-control">
                 <label>Assign To</label>
-                <input v-model="assignedTo" type="text" placeholder="Email or name (optional)" />
+                <select v-model="assignedTo">
+                  <option value="">Shared (no one specific)</option>
+                  <option v-for="member in houseMembers" :key="member" :value="member">
+                    {{ member }}{{ member === currentUser ? ' (You)' : '' }}
+                  </option>
+                </select>
               </div>
 
               <div class="form-control">
@@ -156,6 +165,9 @@
                   <option value="weekly">Weekly</option>
                   <option value="monthly">Monthly</option>
                 </select>
+                <p v-if="frequency !== 'once'" class="helper-text">
+                  ℹ️ New instances will be created automatically after completion
+                </p>
               </div>
             </div>
 
@@ -171,7 +183,7 @@
             </div>
 
             <p v-if="errorMessage" class="error-msg">
-              <span class="error-icon">⚠</span> {{ errorMessage }}
+              <span class="error-icon">⚠️</span> {{ errorMessage }}
             </p>
 
             <div class="form-actions">
@@ -185,6 +197,85 @@
         </div>
       </div>
     </transition>
+
+    <!-- Chore Details Modal -->
+    <transition name="modal-fade">
+      <div v-if="selectedChore" class="modal-overlay" @click.self="closeDetailsModal">
+        <div class="modal-content details-modal">
+          <div class="modal-header">
+            <div>
+              <h3>{{ selectedChore.title }}</h3>
+              <p class="modal-subtitle">Chore details</p>
+            </div>
+            <button class="close-btn" @click="closeDetailsModal">✕</button>
+          </div>
+
+          <div class="details-content">
+            <div class="detail-row">
+              <span class="detail-label">Status:</span>
+              <span class="detail-value">
+                <span v-if="selectedChore.completed" class="status-badge completed"
+                  >✅ Completed</span
+                >
+                <span v-else class="status-badge pending">⏳ Pending</span>
+              </span>
+            </div>
+
+            <div class="detail-row">
+              <span class="detail-label">Assigned to:</span>
+              <span class="detail-value">{{
+                selectedChore.assignedTo || 'Shared (everyone)'
+              }}</span>
+            </div>
+
+            <div class="detail-row">
+              <span class="detail-label">Due date:</span>
+              <span class="detail-value">{{ formatDate(selectedChore.dueDate) }}</span>
+            </div>
+
+            <div class="detail-row">
+              <span class="detail-label">Frequency:</span>
+              <span class="detail-value">{{ selectedChore.frequency || 'once' }}</span>
+            </div>
+
+            <div v-if="selectedChore.description" class="detail-row">
+              <span class="detail-label">Notes:</span>
+              <span class="detail-value">{{ selectedChore.description }}</span>
+            </div>
+
+            <div class="detail-actions">
+              <button
+                v-if="canMarkChore(selectedChore) && !selectedChore.completed"
+                class="btn-primary"
+                :disabled="!isCurrentWeek"
+                @click="toggleComplete(selectedChore)"
+              >
+                ✓ Mark as Done
+              </button>
+              <button
+                v-if="
+                  canMarkChore(selectedChore) &&
+                  selectedChore.completed &&
+                  canUndoChore(selectedChore)
+                "
+                class="btn-secondary"
+                @click="undoComplete(selectedChore._id)"
+              >
+                ↩️ Undo ({{ undoTimeLeft(selectedChore) }}s)
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </transition>
+
+    <!-- Toast Notification -->
+    <transition name="toast">
+      <div v-if="toastMessage" class="toast" :class="toastType">
+        <span class="toast-icon">{{ toastType === 'success' ? '✓' : 'ℹ️' }}</span>
+        {{ toastMessage }}
+      </div>
+    </transition>
   </section>
 </template>
 
@@ -194,30 +285,31 @@ import ChoreItem from '../components/chores/ChoreItem.vue'
 
 export default {
   name: 'ChoresPage',
-
-  components: {
-    ChoreItem,
-  },
-
+  components: { ChoreItem },
   data() {
     return {
       allChores: [],
       isLoading: false,
       errorMessage: '',
       showModal: false,
+      selectedChore: null,
+      toastMessage: '',
+      toastType: 'success',
 
-      // form
+      houseMembers: [],
+
       title: '',
       description: '',
       assignedTo: '',
       dueDate: '',
       frequency: 'once',
 
-      // week control
       weekOffset: 0,
+
+      // Track completion timestamps for undo
+      completionTimestamps: {},
     }
   },
-
   computed: {
     currentUser() {
       return this.$store.getters.currentUser?.name || this.$store.getters.currentUser?.email || ''
@@ -225,11 +317,9 @@ export default {
     householdCode() {
       return this.$store.getters.householdCode
     },
-
     weekStartDate() {
       const base = new Date()
       base.setDate(base.getDate() + this.weekOffset * 7)
-
       const day = base.getDay()
       const diff = day === 0 ? -6 : 1 - day
       const start = new Date(base)
@@ -237,14 +327,12 @@ export default {
       start.setDate(start.getDate() + diff)
       return start
     },
-
     weekEndDate() {
       const end = new Date(this.weekStartDate)
       end.setDate(end.getDate() + 7)
       end.setHours(0, 0, 0, 0)
       return end
     },
-
     weekLabel() {
       const d = this.weekStartDate
       return d.toLocaleDateString(undefined, {
@@ -253,7 +341,6 @@ export default {
         day: 'numeric',
       })
     },
-
     weeklyChores() {
       return this.allChores.filter((c) => {
         if (!c.dueDate) return false
@@ -262,7 +349,6 @@ export default {
         return d >= this.weekStartDate && d < this.weekEndDate
       })
     },
-
     weekDays() {
       const days = []
       const start = this.weekStartDate
@@ -272,11 +358,7 @@ export default {
       for (let i = 0; i < 7; i++) {
         const d = new Date(start)
         d.setDate(start.getDate() + i)
-
-        const label = d.toLocaleDateString(undefined, {
-          weekday: 'short',
-        })
-
+        const label = d.toLocaleDateString(undefined, { weekday: 'short' })
         const key = d.toISOString().slice(0, 10)
         const isToday = d.getTime() === today.getTime()
 
@@ -286,35 +368,23 @@ export default {
           return cd.getTime() === d.getTime()
         })
 
-        days.push({
-          key,
-          label,
-          dateNum: d.getDate(),
-          isToday,
-          date: d,
-          chores: choresForDay,
-        })
+        days.push({ key, label, dateNum: d.getDate(), isToday, date: d, chores: choresForDay })
       }
-
       return days
     },
-
+    isCurrentWeek() {
+      return this.weekOffset === 0
+    },
     myChoresThisWeek() {
       if (!this.currentUser) return []
-
-      const meEmail = (this.currentUser.email || '').toLowerCase()
-      const meName = (this.currentUser.name || '').toLowerCase()
+      const userLower = this.currentUser.toLowerCase()
 
       return this.weeklyChores.filter((c) => {
         const assigned = (c.assignedTo || '').toLowerCase()
         const created = (c.createdBy || '').toLowerCase()
-
-        return (
-          assigned === meEmail || assigned === meName || created === meEmail || created === meName
-        )
+        return assigned === userLower || created === userLower
       })
     },
-
     upcomingChores() {
       return this.weeklyChores
         .filter((c) => !c.completed)
@@ -322,7 +392,6 @@ export default {
         .slice(0, 5)
     },
   },
-
   watch: {
     householdCode(newVal, oldVal) {
       if (newVal && newVal !== oldVal) {
@@ -330,18 +399,21 @@ export default {
       }
     },
   },
-
   methods: {
     shiftWeek(delta) {
       this.weekOffset += delta
     },
-
     closeModal() {
       this.showModal = false
       this.resetForm()
       this.errorMessage = ''
     },
-
+    closeDetailsModal() {
+      this.selectedChore = null
+    },
+    openChoreDetails(chore) {
+      this.selectedChore = chore
+    },
     resetForm() {
       this.title = ''
       this.description = ''
@@ -349,37 +421,38 @@ export default {
       this.dueDate = ''
       this.frequency = 'once'
     },
-
     async fetchChores() {
       if (!this.householdCode) return
-
       this.isLoading = true
-      this.errorMessage = ''
-
       try {
         const res = await axios.get('http://localhost:5000/api/chores', {
-          params: {
-            householdCode: this.householdCode,
-          },
+          params: { householdCode: this.householdCode },
         })
-
         this.allChores = res.data || []
+        this.fetchHouseholdMembers()
       } catch (err) {
         console.error('Error fetching chores', err)
-        this.errorMessage = 'Could not load chores.'
       } finally {
         this.isLoading = false
       }
     },
-
+    async fetchHouseholdMembers() {
+      const membersSet = new Set([this.currentUser])
+      this.allChores.forEach((chore) => {
+        if (chore.assignedTo) membersSet.add(chore.assignedTo)
+        if (chore.createdBy) membersSet.add(chore.createdBy)
+      })
+      this.houseMembers = Array.from(membersSet).sort()
+      if (this.houseMembers.length === 1) {
+        this.houseMembers = [this.currentUser, 'Roommate 1', 'Roommate 2']
+      }
+    },
     async onSubmit() {
       this.errorMessage = ''
-
       if (!this.title || !this.dueDate) {
         this.errorMessage = 'Chore title and due date are required.'
         return
       }
-
       if (!this.householdCode || !this.currentUser) {
         this.errorMessage = 'No household or user. Please login again.'
         return
@@ -393,67 +466,141 @@ export default {
           dueDate: this.dueDate,
           frequency: this.frequency,
           householdCode: this.householdCode,
-          createdBy: this.currentUser.email || this.currentUser.name,
+          createdBy: this.currentUser,
         }
 
         const res = await axios.post('http://localhost:5000/api/chores', body)
-
-        const created = res.data
-        this.allChores.push(created)
-
+        this.allChores.push(res.data)
         this.closeModal()
+        this.showToast('Chore added successfully!', 'success')
+        this.fetchHouseholdMembers()
       } catch (err) {
         console.error('Create chore error', err)
         this.errorMessage = err.response?.data?.message || 'Error creating chore.'
       }
     },
-
-    canMarkDone(chore) {
+    canMarkChore(chore) {
       if (!this.currentUser) return false
-
-      const meEmail = (this.currentUser.email || '').toLowerCase()
-      const meName = (this.currentUser.name || '').toLowerCase()
-
+      const userLower = this.currentUser.toLowerCase()
       const created = (chore.createdBy || '').toLowerCase()
       const assigned = (chore.assignedTo || '').toLowerCase()
 
-      const isCreator = created === meEmail || created === meName
-      const isAssignee = assigned === meEmail || assigned === meName
-
-      return isCreator || isAssignee
+      // Can mark if creator, assignee, or if it's a shared chore (no assignee)
+      return created === userLower || assigned === userLower || !chore.assignedTo
     },
-
     async toggleComplete(chore) {
-      if (!this.currentUser) return
+      if (!this.isCurrentWeek) {
+        this.showToast('You can only complete chores for the current week', 'info')
+        return
+      }
+      if (!this.canMarkChore(chore)) return
 
       try {
-        const me = this.currentUser.email || this.currentUser.name
-
         const res = await axios.patch(`http://localhost:5000/api/chores/${chore._id}/complete`, {
-          currentUser: me,
+          currentUser: this.currentUser,
         })
 
-        const updated = res.data
+        const updated = res.data.chore || res.data
 
+        // Track completion time for undo feature (only when marking as complete)
+        if (updated.completed) {
+          this.completionTimestamps[updated._id] = Date.now()
+
+          // If this was a recurring chore and it's now complete, a new instance may have been created
+          if (res.data.newChore) {
+            this.allChores.push(res.data.newChore)
+            this.showToast('Chore marked as done! Next occurrence created.', 'success')
+          } else {
+            this.showToast('Chore marked as done!', 'success')
+          }
+        } else {
+          // Being marked as incomplete - remove timestamp
+          delete this.completionTimestamps[updated._id]
+          this.showToast('Chore marked as incomplete', 'info')
+        }
+
+        // Update the chore in the list
         this.allChores = this.allChores.map((c) => (c._id === updated._id ? updated : c))
+
+        // Update selected chore if open
+        if (this.selectedChore && this.selectedChore._id === updated._id) {
+          this.selectedChore = updated
+        }
       } catch (err) {
         console.error('Complete chore error', err)
-        alert(err.response?.data?.message || 'Could not update this chore.')
+        this.showToast(err.response?.data?.message || 'Could not update chore', 'error')
       }
     },
+    async undoComplete(choreId) {
+      const chore = this.allChores.find((c) => c._id === choreId)
+      if (!chore || !chore.completed) return
 
-    async handleMarkDoneFromCard(id) {
-      const chore = this.allChores.find((c) => c._id === id)
-      if (chore) {
-        await this.toggleComplete(chore)
+      try {
+        const res = await axios.patch(`http://localhost:5000/api/chores/${choreId}/complete`, {
+          currentUser: this.currentUser,
+        })
+
+        const updated = res.data.chore || res.data
+
+        // Remove completion timestamp
+        delete this.completionTimestamps[choreId]
+
+        // If there was a recurring chore created, remove it
+        if (res.data.removedChoreId) {
+          this.allChores = this.allChores.filter((c) => c._id !== res.data.removedChoreId)
+        }
+
+        // Update the original chore to incomplete
+        this.allChores = this.allChores.map((c) => (c._id === updated._id ? updated : c))
+
+        if (this.selectedChore && this.selectedChore._id === updated._id) {
+          this.selectedChore = updated
+        }
+
+        this.showToast('Chore completion undone', 'info')
+      } catch (err) {
+        console.error('Undo chore error', err)
+        this.showToast('Could not undo chore', 'error')
       }
+    },
+    canUndoChore(chore) {
+      if (!chore.completed) return false
+      const timestamp = this.completionTimestamps[chore._id]
+      if (!timestamp) return false
+      const fiveMinutes = 5 * 60 * 1000
+      return Date.now() - timestamp < fiveMinutes
+    },
+    undoTimeLeft(chore) {
+      const timestamp = this.completionTimestamps[chore._id]
+      if (!timestamp) return 0
+      const elapsed = Date.now() - timestamp
+      const fiveMinutes = 5 * 60 * 1000
+      const remaining = Math.ceil((fiveMinutes - elapsed) / 1000)
+      return Math.max(0, remaining)
+    },
+    showToast(message, type = 'success') {
+      this.toastMessage = message
+      this.toastType = type
+      setTimeout(() => (this.toastMessage = ''), 3000)
+    },
+    formatDate(dateString) {
+      return new Date(dateString).toLocaleDateString(undefined, {
+        weekday: 'long',
+        month: 'long',
+        day: 'numeric',
+        year: 'numeric',
+      })
     },
   },
-
   mounted() {
     if (this.householdCode) {
       this.fetchChores()
     }
+
+    // Update undo timers every second
+    setInterval(() => {
+      this.$forceUpdate()
+    }, 1000)
   },
 }
 </script>
@@ -463,11 +610,6 @@ export default {
   max-width: 1200px;
   margin: 0 auto;
   padding: 24px 20px 40px;
-}
-
-/* Header Section */
-.chores-header {
-  margin-bottom: 16px;
 }
 
 .chores-header h2 {
@@ -483,7 +625,6 @@ export default {
   color: var(--text-light);
 }
 
-/* Week Controls */
 .week-controls {
   display: flex;
   align-items: center;
@@ -494,10 +635,8 @@ export default {
   border-radius: 16px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
   border: 1px solid var(--card-border);
-  margin-bottom: 24px;
+  margin: 16px auto 24px;
   max-width: 400px;
-  margin-left: auto;
-  margin-right: auto;
 }
 
 .pill-btn {
@@ -511,7 +650,7 @@ export default {
   transition: all 0.2s;
   color: var(--navy);
   display: flex;
-  align-items: center;
+  /*align-items: center;*/
   gap: 6px;
 }
 
@@ -519,10 +658,6 @@ export default {
   background: var(--primary);
   color: white;
   transform: translateY(-1px);
-}
-
-.arrow {
-  font-size: 1.1rem;
 }
 
 .week-label {
@@ -533,7 +668,6 @@ export default {
   text-align: center;
 }
 
-/* Top Cards Layout */
 .top-cards {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -541,13 +675,6 @@ export default {
   margin-bottom: 24px;
 }
 
-@media (max-width: 1024px) {
-  .top-cards {
-    grid-template-columns: 1fr;
-  }
-}
-
-/* Week Grid Calendar */
 .week-grid {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
@@ -624,7 +751,6 @@ export default {
   font-size: 1.5rem;
 }
 
-/* Chore Chip */
 .chore-chip {
   border-radius: 12px;
   background: white;
@@ -632,6 +758,7 @@ export default {
   padding: 10px;
   transition: all 0.2s;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  cursor: pointer;
 }
 
 .chore-chip:hover {
@@ -641,7 +768,6 @@ export default {
 }
 
 .chore-main {
-  flex: 1;
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -682,8 +808,6 @@ export default {
 .frequency-tag {
   font-size: 0.7rem;
   color: var(--text-light);
-  text-transform: uppercase;
-  letter-spacing: 0.3px;
 }
 
 .completed-badge {
@@ -695,12 +819,6 @@ export default {
   color: #065f46;
 }
 
-.chore-action:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
-/* Sidebar Cards */
 .sidebar-card {
   padding: 18px;
 }
@@ -747,13 +865,6 @@ export default {
   margin-bottom: 12px;
 }
 
-.empty-state p {
-  margin: 0;
-  font-size: 0.9rem;
-  color: var(--text-light);
-}
-
-/* Card Styling */
 .card {
   background: #ffffff;
   border-radius: 20px;
@@ -762,7 +873,6 @@ export default {
   border: 1px solid var(--card-border);
 }
 
-/* Add Chore Section */
 .add-chore-section {
   display: flex;
   justify-content: center;
@@ -779,7 +889,7 @@ export default {
   font-weight: 700;
   font-size: 1.1rem;
   box-shadow: 0 6px 20px rgba(255, 159, 147, 0.35);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.3s;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -790,16 +900,10 @@ export default {
   box-shadow: 0 8px 24px rgba(255, 159, 147, 0.45);
 }
 
-.add-chore-btn:active {
-  transform: translateY(-1px);
-}
-
 .plus-icon {
   font-size: 1.4rem;
-  font-weight: 700;
 }
 
-/* Modal Styles */
 .modal-overlay {
   position: fixed;
   top: 0;
@@ -819,11 +923,16 @@ export default {
   background: #ffffff;
   border-radius: 24px;
   padding: 32px;
+  /* Continue from modal-content padding */
   max-width: 600px;
   width: 100%;
   max-height: 90vh;
   overflow-y: auto;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+.details-modal {
+  max-width: 500px;
 }
 
 .modal-header {
@@ -868,6 +977,60 @@ export default {
   transform: rotate(90deg);
 }
 
+/* Details Modal Content */
+.details-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.detail-row {
+  display: flex;
+  gap: 12px;
+  padding: 12px;
+  background: #f9fafb;
+  border-radius: 12px;
+}
+
+.detail-label {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-light);
+  min-width: 100px;
+}
+
+.detail-value {
+  font-size: 0.9rem;
+  color: var(--text-dark);
+  flex: 1;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.status-badge.completed {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.status-badge.pending {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.detail-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #e5e7eb;
+}
+
 /* Form Styling */
 .add-form {
   margin-top: 8px;
@@ -901,6 +1064,7 @@ export default {
   font-size: 0.95rem;
   transition: all 0.2s;
   font-family: inherit;
+  background: white;
 }
 
 .form-control input:focus,
@@ -914,6 +1078,13 @@ export default {
 .form-control textarea {
   resize: vertical;
   min-height: 80px;
+}
+
+.helper-text {
+  margin: 6px 0 0;
+  font-size: 0.8rem;
+  color: var(--text-light);
+  font-style: italic;
 }
 
 .form-actions {
@@ -981,6 +1152,45 @@ export default {
   font-size: 1.1rem;
 }
 
+/* Toast Notification */
+.toast {
+  position: fixed;
+  bottom: 32px;
+  right: 32px;
+  background: white;
+  padding: 16px 24px;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-weight: 600;
+  z-index: 2000;
+  border: 2px solid #d1d5db;
+}
+
+.toast.success {
+  border-color: #10b981;
+  background: #f0fdf4;
+  color: #059669;
+}
+
+.toast.info {
+  border-color: #3b82f6;
+  background: #eff6ff;
+  color: #2563eb;
+}
+
+.toast.error {
+  border-color: #ef4444;
+  background: #fef2f2;
+  color: #dc2626;
+}
+
+.toast-icon {
+  font-size: 1.3rem;
+}
+
 /* Modal Transitions */
 .modal-fade-enter-active,
 .modal-fade-leave-active {
@@ -1002,7 +1212,29 @@ export default {
   transform: scale(0.9) translateY(20px);
 }
 
+/* Toast Transitions */
+.toast-enter-active,
+.toast-leave-active {
+  transition: all 0.3s ease;
+}
+
+.toast-enter-from {
+  opacity: 0;
+  transform: translateX(100px);
+}
+
+.toast-leave-to {
+  opacity: 0;
+  transform: translateY(20px);
+}
+
 /* Responsive Design */
+@media (max-width: 1024px) {
+  .top-cards {
+    grid-template-columns: 1fr;
+  }
+}
+
 @media (max-width: 768px) {
   .chores-header {
     flex-direction: column;
@@ -1024,6 +1256,12 @@ export default {
 
   .modal-content {
     padding: 24px;
+  }
+
+  .toast {
+    bottom: 20px;
+    right: 20px;
+    left: 20px;
   }
 }
 </style>

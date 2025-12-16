@@ -1,134 +1,207 @@
 <template>
   <section class="groceries">
-    <!-- Header + stats -->
-    <div class="header-row">
+    <!-- Header -->
+    <div class="groceries-header">
       <div>
-        <h2>Groceries</h2>
-        <p class="subtitle">A shared shopping list for your whole household 🛒</p>
-      </div>
-
-      <div class="stats-row">
-        <div class="stat-card">
-          <div class="stat-number">{{ pendingCount }}</div>
-          <div class="stat-label">Items to buy</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-number">{{ purchasedTodayCount }}</div>
-          <div class="stat-label">Bought today</div>
-        </div>
+        <h2>Grocery List</h2>
+        <p class="subtitle">Your shared household shopping list 🛒</p>
       </div>
     </div>
 
-    <!-- Add form -->
-    <div class="card add-card">
-      <h3>Add grocery item</h3>
-      <form class="add-form" @submit.prevent="onSubmit">
-        <div class="form-row two-cols">
-          <div class="form-control">
-            <label>Item</label>
-            <input v-model="name" type="text" placeholder="Milk, eggs, dish soap…" />
-          </div>
-
-          <div class="form-control">
-            <label>Quantity</label>
-            <input v-model="quantity" type="text" placeholder="1 pack, 2 kg…" />
-          </div>
+    <!-- Summary Cards -->
+    <div class="summary-cards">
+      <div class="card summary-card">
+        <div class="summary-icon" style="background: #fef8ec">📝</div>
+        <div class="summary-content">
+          <h3>{{ pendingCount }}</h3>
+          <p>Items to Buy</p>
         </div>
+      </div>
 
-        <div class="form-row">
-          <div class="form-control">
-            <label>Category</label>
-            <select v-model="category">
-              <option value="Produce">Produce</option>
-              <option value="Snacks">Snacks</option>
-              <option value="Dairy">Dairy</option>
-              <option value="Meat">Meat</option>
-              <option value="Cleaning">Cleaning</option>
-              <option value="Toiletries">Toiletries</option>
-              <option value="Other">Other</option>
-            </select>
-          </div>
+      <div class="card summary-card">
+        <div class="summary-icon" style="background: #d4f1f0">✅</div>
+        <div class="summary-content">
+          <h3>{{ purchasedTodayCount }}</h3>
+          <p>Bought Today</p>
         </div>
+      </div>
 
-        <p v-if="errorMessage" class="error-msg">{{ errorMessage }}</p>
-
-        <div class="form-actions">
-          <button type="submit" class="btn-primary">Add to list</button>
+      <div class="card summary-card">
+        <div class="summary-icon" style="background: #ffe5f0">📦</div>
+        <div class="summary-content">
+          <h3>{{ totalCategories }}</h3>
+          <p>Categories</p>
         </div>
-      </form>
+      </div>
     </div>
 
     <!-- Tabs: active list vs history -->
-    <div class="tabs">
-      <button class="tab-btn" :class="{ active: activeTab === 'list' }" @click="activeTab = 'list'">
-        Current list
-      </button>
-      <button
-        class="tab-btn"
-        :class="{ active: activeTab === 'history' }"
-        @click="activeTab = 'history'"
-      >
-        Purchase history
-      </button>
+    <div class="tabs-section">
+      <div class="tabs">
+        <button
+          class="tab-btn"
+          :class="{ active: activeTab === 'list' }"
+          @click="activeTab = 'list'"
+        >
+          Shopping List
+        </button>
+        <button
+          class="tab-btn"
+          :class="{ active: activeTab === 'history' }"
+          @click="activeTab = 'history'"
+        >
+          Purchase History
+        </button>
+      </div>
 
-      <button class="refresh-btn" @click="fetchAll">Refresh</button>
+      <button class="btn-add" @click="showModal = true">
+        <span class="plus-icon">+</span>
+        Add Item
+      </button>
     </div>
 
     <!-- CURRENT LIST -->
     <div v-if="activeTab === 'list'" class="card list-card">
-      <h3>Shared grocery list</h3>
-      <p class="list-subtitle">
-        Only pending items appear here. Purchased items go to history.
-      </p>
+      <div class="list-header">
+        <h3>Shopping List</h3>
+        <button class="refresh-btn" @click="fetchAll" title="Refresh">🔄</button>
+      </div>
+      <p class="list-subtitle">Check off items as you shop. They'll move to purchase history.</p>
 
-      <!-- FILTER BAR (NO Purchased option anymore) -->
+      <!-- FILTER BAR -->
       <div class="filter-bar">
-        <input v-model="searchText" type="text" class="filter-input" placeholder="Search groceries…" />
+        <input
+          v-model="searchText"
+          type="text"
+          class="filter-input"
+          placeholder="🔍 Search items..."
+        />
 
         <select v-model="filterCategory" class="filter-select">
-          <option value="All">All categories</option>
-          <option value="Produce">Produce</option>
-          <option value="Snacks">Snacks</option>
-          <option value="Dairy">Dairy</option>
-          <option value="Meat">Meat</option>
-          <option value="Cleaning">Cleaning</option>
-          <option value="Toiletries">Toiletries</option>
-          <option value="Other">Other</option>
+          <option value="All">All Categories</option>
+          <option value="Produce">🥬 Produce</option>
+          <option value="Dairy">🥛 Dairy</option>
+          <option value="Meat">🥩 Meat</option>
+          <option value="Snacks">🍿 Snacks</option>
+          <option value="Cleaning">🧼 Cleaning</option>
+          <option value="Toiletries">🧴 Toiletries</option>
+          <option value="Other">📦 Other</option>
         </select>
       </div>
 
-      <div v-if="isLoading" class="loading">Loading groceries…</div>
+      <div v-if="isLoading" class="loading-state">
+        <p>Loading groceries...</p>
+      </div>
 
       <div v-else>
-        <div v-if="filteredGroceries.length === 0" class="empty-msg">
-          No pending groceries match your filter.
+        <div v-if="filteredGroceries.length === 0" class="empty-state">
+          <span class="empty-emoji">🛒</span>
+          <p>
+            {{
+              searchText || filterCategory !== 'All'
+                ? 'No items match your filter'
+                : 'Your shopping list is empty!'
+            }}
+          </p>
         </div>
 
-        <GroceryItem
-          v-for="item in filteredGroceries"
-          :key="item._id"
-          :grocery="item"
-          @toggle="handleToggle"
-          @delete="handleDelete"
-        />
+        <div class="grocery-grid">
+          <GroceryItem
+            v-for="item in filteredGroceries"
+            :key="item._id"
+            :grocery="item"
+            @toggle="handleToggle"
+            @delete="handleDelete"
+          />
+        </div>
       </div>
     </div>
 
     <!-- HISTORY -->
     <div v-else class="card list-card">
-      <h3>Grocery history</h3>
-      <p class="list-subtitle">
-        Recently purchased items appear here.
-      </p>
+      <div class="list-header">
+        <h3>Purchase History</h3>
+        <button class="refresh-btn" @click="fetchHistory" title="Refresh">🔄</button>
+      </div>
+      <p class="list-subtitle">Recently purchased items from the past 30 days.</p>
 
-      <div v-if="isLoadingHistory" class="loading">Loading history…</div>
+      <div v-if="isLoadingHistory" class="loading-state">
+        <p>Loading history...</p>
+      </div>
 
       <div v-else>
-        <div v-if="history.length === 0" class="empty-msg">No purchase history yet.</div>
+        <div v-if="history.length === 0" class="empty-state">
+          <span class="empty-emoji">📋</span>
+          <p>No purchase history yet.</p>
+        </div>
 
-        <GroceryHistoryItem v-for="item in history" :key="item._id" :item="item" />
+        <div class="history-grid">
+          <GroceryHistoryItem v-for="item in history" :key="item._id" :item="item" />
+        </div>
       </div>
     </div>
+
+    <!-- Add Grocery Modal -->
+    <transition name="modal-fade">
+      <div v-if="showModal" class="modal-overlay" @click.self="closeModal">
+        <div class="modal-content">
+          <div class="modal-header">
+            <div>
+              <h3>Add Grocery Item</h3>
+              <p class="modal-subtitle">Add a new item to your shopping list</p>
+            </div>
+            <button class="close-btn" @click="closeModal">✕</button>
+          </div>
+
+          <form class="add-form" @submit.prevent="onSubmit">
+            <div class="form-row">
+              <div class="form-control">
+                <label>Item Name *</label>
+                <input
+                  v-model="name"
+                  type="text"
+                  placeholder="e.g. Milk, Eggs, Bread..."
+                  required
+                  autofocus
+                />
+              </div>
+            </div>
+
+            <div class="form-row two-cols">
+              <div class="form-control">
+                <label>Quantity</label>
+                <input v-model="quantity" type="text" placeholder="e.g. 2 liters, 1 pack" />
+              </div>
+
+              <div class="form-control">
+                <label>Category</label>
+                <select v-model="category">
+                  <option value="Produce">🥬 Produce</option>
+                  <option value="Dairy">🥛 Dairy</option>
+                  <option value="Meat">🥩 Meat</option>
+                  <option value="Snacks">🍿 Snacks</option>
+                  <option value="Cleaning">🧼 Cleaning</option>
+                  <option value="Toiletries">🧴 Toiletries</option>
+                  <option value="Other">📦 Other</option>
+                </select>
+              </div>
+            </div>
+
+            <p v-if="errorMessage" class="error-msg">
+              <span class="error-icon">⚠</span> {{ errorMessage }}
+            </p>
+
+            <div class="form-actions">
+              <button type="button" class="btn-secondary" @click="closeModal">Cancel</button>
+              <button type="submit" class="btn-primary">
+                <span class="btn-icon">+</span>
+                Add to List
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </transition>
 
     <!-- Undo toast -->
     <BaseToast
@@ -164,6 +237,7 @@ export default {
       isLoadingHistory: false,
       errorMessage: '',
       activeTab: 'list',
+      showModal: false,
 
       // form
       name: '',
@@ -179,7 +253,7 @@ export default {
         show: false,
         message: '',
         timer: null,
-        lastUndoId: null, // grocery id to toggle back
+        lastUndoId: null,
       },
     }
   },
@@ -208,12 +282,18 @@ export default {
       }).length
     },
 
-    //  IMPORTANT: current list shows ONLY pending items
+    totalCategories() {
+      const categories = new Set(
+        this.groceries.filter((g) => !g.isPurchased).map((g) => g.category || 'Other'),
+      )
+      return categories.size
+    },
+
     filteredGroceries() {
       const q = this.searchText.trim().toLowerCase()
 
       return this.groceries
-        .filter((g) => !g.isPurchased) // <--- purchased items never show in current list
+        .filter((g) => !g.isPurchased)
         .filter((g) => {
           const cat = g.category || 'Other'
           const categoryOk = this.filterCategory === 'All' || cat === this.filterCategory
@@ -266,6 +346,18 @@ export default {
       await Promise.all([this.fetchGroceries(), this.fetchHistory()])
     },
 
+    closeModal() {
+      this.showModal = false
+      this.resetForm()
+      this.errorMessage = ''
+    },
+
+    resetForm() {
+      this.name = ''
+      this.quantity = '1'
+      this.category = 'Produce'
+    },
+
     async onSubmit() {
       this.errorMessage = ''
 
@@ -291,9 +383,7 @@ export default {
         const res = await axios.post('http://localhost:5000/api/groceries', body)
         this.groceries.push(res.data)
 
-        this.name = ''
-        this.quantity = '1'
-        this.category = 'Produce'
+        this.closeModal()
       } catch (err) {
         console.error('Create grocery error', err)
         this.errorMessage = err.response?.data?.message || 'Error adding grocery item.'
@@ -301,14 +391,12 @@ export default {
     },
 
     showToast(message, undoId) {
-      // clear existing timer
       if (this.toast.timer) clearTimeout(this.toast.timer)
 
       this.toast.show = true
       this.toast.message = message
       this.toast.lastUndoId = undoId
 
-      // auto hide after 5 seconds
       this.toast.timer = setTimeout(() => {
         this.hideToast()
       }, 5000)
@@ -326,11 +414,9 @@ export default {
       const id = this.toast.lastUndoId
       if (!id) return
       this.hideToast()
-      // Toggle back to pending by calling the same endpoint again
       await this.handleToggle(id, { silentToast: true })
     },
 
-    //  toggling purchase shows undo toast only when marking as purchased
     async handleToggle(id, opts = {}) {
       if (!this.currentUser) return
 
@@ -347,10 +433,9 @@ export default {
         this.groceries = this.groceries.map((g) => (g._id === updated._id ? updated : g))
         await this.fetchHistory()
 
-        // If it became purchased now (pending -> purchased), show undo toast
         if (!wasPurchased && updated.isPurchased && !opts.silentToast) {
           const itemName = updated.name || 'Item'
-          this.showToast(`✅ “${itemName}” marked as purchased`, updated._id)
+          this.showToast(`✅ "${itemName}" marked as purchased`, updated._id)
         }
       } catch (err) {
         console.error('Toggle grocery error', err)
@@ -359,6 +444,10 @@ export default {
     },
 
     async handleDelete(id) {
+      if (!confirm('Are you sure you want to delete this item?')) {
+        return
+      }
+
       try {
         await axios.delete(`http://localhost:5000/api/groceries/${id}`)
         this.groceries = this.groceries.filter((g) => g._id !== id)
@@ -379,191 +468,461 @@ export default {
 
 <style scoped>
 .groceries {
-  max-width: 900px;
+  max-width: 1200px;
   margin: 0 auto;
+  padding: 24px 20px 40px;
 }
 
-.header-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 12px;
-  margin-bottom: 12px;
+/* Header */
+.groceries-header {
+  margin-bottom: 24px;
 }
 
-.header-row h2 {
+.groceries-header h2 {
   margin: 0;
   color: var(--navy);
+  font-size: 2rem;
+  font-weight: 700;
 }
 
 .subtitle {
-  margin: 4px 0 0;
+  margin: 6px 0 0;
+  font-size: 1rem;
   color: var(--text-light);
-  font-size: 0.9rem;
 }
 
-.stats-row {
+/* Summary Cards */
+.summary-cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+  margin-bottom: 24px;
+}
+
+.summary-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 20px;
+}
+
+.summary-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.8rem;
+}
+
+.summary-content h3 {
+  margin: 0;
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: var(--primary);
+}
+
+.summary-content p {
+  margin: 4px 0 0;
+  font-size: 0.9rem;
+  color: var(--text-light);
+}
+
+/* Tabs Section */
+.tabs-section {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  gap: 16px;
+}
+
+.tabs {
   display: flex;
   gap: 8px;
-}
-
-.stat-card {
-  padding: 6px 10px;
-  border-radius: 14px;
-  background: linear-gradient(135deg, var(--primary-light), var(--pink));
+  background: white;
+  padding: 4px;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
   border: 1px solid var(--card-border);
-  box-shadow: var(--soft-shadow);
-  min-width: 90px;
 }
 
-.stat-number {
+.tab-btn {
+  border-radius: 8px;
+  border: none;
+  padding: 8px 20px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  background: transparent;
+  color: var(--text-dark);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.tab-btn.active {
+  background: linear-gradient(135deg, var(--primary), var(--primary-light));
+  color: white;
+}
+
+.btn-add {
+  border: none;
+  border-radius: 12px;
+  padding: 10px 20px;
+  background: linear-gradient(135deg, var(--primary), var(--primary-light));
+  color: #ffffff;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s;
+}
+
+.btn-add:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 48, 73, 0.2);
+}
+
+.plus-icon {
   font-size: 1.2rem;
+}
+
+/* List Card */
+.list-card {
+  padding: 20px;
+}
+
+.list-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.list-header h3 {
+  margin: 0;
+  color: var(--navy);
+  font-size: 1.3rem;
   font-weight: 700;
-  color: var(--navy);
 }
 
-.stat-label {
-  font-size: 0.75rem;
-  color: var(--text-light);
+.refresh-btn {
+  background: transparent;
+  border: none;
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 8px;
+  transition: all 0.2s;
 }
 
-.card {
-  background: #ffffff;
-  border-radius: 18px;
-  padding: 14px 14px 16px;
-  margin-bottom: 14px;
-  box-shadow: var(--soft-shadow);
-  border: 1px solid var(--card-border);
-}
-
-.add-card h3,
-.list-card h3 {
-  margin-top: 0;
-  margin-bottom: 6px;
-  color: var(--navy);
+.refresh-btn:hover {
+  background: var(--primary-light);
 }
 
 .list-subtitle {
-  margin: 0 0 8px;
+  margin: 0 0 16px;
   font-size: 0.85rem;
   color: var(--text-light);
 }
 
+/* Filter Bar */
+.filter-bar {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.filter-input {
+  padding: 12px 16px;
+  border-radius: 12px;
+  border: 2px solid #e5e7eb;
+  font-size: 0.95rem;
+  transition: all 0.2s;
+}
+
+.filter-input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(0, 48, 73, 0.1);
+}
+
+.filter-select {
+  padding: 12px 16px;
+  border-radius: 12px;
+  border: 2px solid #e5e7eb;
+  font-size: 0.95rem;
+  background: white;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.filter-select:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+/* States */
+.loading-state {
+  text-align: center;
+  padding: 48px 16px;
+  color: var(--text-light);
+}
+
+.empty-state {
+  text-align: center;
+  padding: 48px 16px;
+}
+
+.empty-emoji {
+  font-size: 3rem;
+  display: block;
+  margin-bottom: 12px;
+}
+
+.empty-state p {
+  margin: 0;
+  font-size: 0.95rem;
+  color: var(--text-light);
+}
+
+/* Grids */
+.grocery-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.history-grid {
+  display: grid;
+  gap: 10px;
+}
+
+/* Card */
+.card {
+  background: #ffffff;
+  border-radius: 20px;
+  padding: 16px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+  border: 1px solid var(--card-border);
+}
+
+/* Modal */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.modal-content {
+  background: #ffffff;
+  border-radius: 24px;
+  padding: 32px;
+  max-width: 500px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 24px;
+  gap: 16px;
+}
+
+.modal-header h3 {
+  margin: 0 0 4px;
+  color: var(--navy);
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.modal-subtitle {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--text-light);
+}
+
+.close-btn {
+  background: #f3f4f6;
+  border: none;
+  font-size: 1.4rem;
+  cursor: pointer;
+  color: var(--navy);
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.close-btn:hover {
+  background: #e5e7eb;
+  transform: rotate(90deg);
+}
+
+/* Form */
 .add-form {
-  margin-top: 4px;
+  margin-top: 8px;
 }
 
 .form-row {
-  margin-bottom: 10px;
+  margin-bottom: 20px;
 }
 
 .two-cols {
   display: grid;
-  grid-template-columns: 1.4fr 0.8fr;
-  gap: 10px;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
 }
 
 .form-control label {
   display: block;
-  font-size: 0.85rem;
-  color: var(--text-light);
+  font-size: 0.9rem;
+  color: var(--navy);
+  font-weight: 600;
+  margin-bottom: 8px;
 }
 
 .form-control input,
 .form-control select {
   width: 100%;
-  margin-top: 4px;
-  padding: 8px 10px;
-  border-radius: 10px;
-  border: 1px solid #d1d5db;
-  font-size: 0.9rem;
+  padding: 12px 16px;
+  border-radius: 12px;
+  border: 2px solid #e5e7eb;
+  font-size: 0.95rem;
+  transition: all 0.2s;
+  font-family: inherit;
+}
+
+.form-control input:focus,
+.form-control select:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(0, 48, 73, 0.1);
 }
 
 .form-actions {
   display: flex;
   justify-content: flex-end;
+  gap: 12px;
+  margin-top: 28px;
+  padding-top: 20px;
+  border-top: 1px solid #e5e7eb;
 }
 
-.btn-primary {
+.btn-primary,
+.btn-secondary {
   border: none;
-  border-radius: 999px;
-  padding: 8px 16px;
-  background: linear-gradient(135deg, var(--primary), var(--peach));
-  color: #ffffff;
+  border-radius: 12px;
+  padding: 12px 24px;
   cursor: pointer;
   font-weight: 600;
-}
-
-.error-msg {
-  margin-top: 4px;
-  font-size: 0.8rem;
-  color: #b91c1c;
-}
-
-/* tabs */
-.tabs {
+  font-size: 1rem;
+  transition: all 0.2s;
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 10px;
 }
 
-.tab-btn {
-  border-radius: 999px;
-  border: 1px solid var(--card-border);
-  padding: 4px 12px;
-  font-size: 0.85rem;
-  background: var(--primary-light);
-  cursor: pointer;
+.btn-primary {
+  background: linear-gradient(135deg, var(--primary), var(--primary-light));
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(0, 48, 73, 0.2);
 }
 
-.tab-btn.active {
-  background: var(--primary);
-  color: #fff;
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 48, 73, 0.3);
 }
 
-.refresh-btn {
-  margin-left: auto;
-  border-radius: 999px;
-  border: none;
-  padding: 4px 10px;
-  font-size: 0.8rem;
-  background: var(--primary-light);
-  cursor: pointer;
+.btn-secondary {
+  background: #f3f4f6;
+  color: var(--navy);
 }
 
-/* filter bar */
-.filter-bar {
+.btn-secondary:hover {
+  background: #e5e7eb;
+}
+
+.btn-icon {
+  font-size: 1.2rem;
+  font-weight: 700;
+}
+
+.error-msg {
+  margin-top: 12px;
+  padding: 12px 16px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 12px;
+  font-size: 0.9rem;
+  color: #b91c1c;
   display: flex;
-  flex-wrap: wrap;
+  align-items: center;
   gap: 8px;
-  margin: 10px 0 12px;
 }
 
-.filter-input {
-  flex: 1;
-  min-width: 180px;
-  padding: 8px 10px;
-  border-radius: 12px;
-  border: 1px solid #d1d5db;
-  font-size: 0.9rem;
+.error-icon {
+  font-size: 1.1rem;
 }
 
-.filter-select {
-  padding: 8px 10px;
-  border-radius: 12px;
-  border: 1px solid #d1d5db;
-  font-size: 0.9rem;
-  background: #fff;
+/* Modal Transitions */
+.modal-fade-enter-active,
+.modal-fade-leave-active {
+  transition: opacity 0.3s ease;
 }
 
-.loading {
-  font-size: 0.85rem;
-  color: var(--text-light);
+.modal-fade-enter-active .modal-content,
+.modal-fade-leave-active .modal-content {
+  transition: transform 0.3s ease;
 }
 
-.empty-msg {
-  font-size: 0.85rem;
-  color: var(--text-light);
+.modal-fade-enter-from,
+.modal-fade-leave-to {
+  opacity: 0;
+}
+
+.modal-fade-enter-from .modal-content,
+.modal-fade-leave-to .modal-content {
+  transform: scale(0.9) translateY(20px);
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .summary-cards {
+    grid-template-columns: 1fr;
+  }
+
+  .tabs-section {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+
+@media (max-width: 768px) {
+  .two-cols {
+    grid-template-columns: 1fr;
+  }
+
+  .filter-bar {
+    flex-direction: column;
+  }
 }
 </style>
