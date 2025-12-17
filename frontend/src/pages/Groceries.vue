@@ -558,7 +558,7 @@ export default {
 }
 
 .tab-btn.active {
-  background: linear-gradient(135deg, var(--primary), var(--primary-light));
+  background: linear-gradient(135deg, var(--primary), var(--peach));
   color: white;
 }
 
@@ -566,7 +566,7 @@ export default {
   border: none;
   border-radius: 12px;
   padding: 10px 20px;
-  background: linear-gradient(135deg, var(--primary), var(--primary-light));
+  background: linear-gradient(135deg, var(--primary), var(--peach));
   color: #ffffff;
   cursor: pointer;
   font-weight: 600;
@@ -839,7 +839,7 @@ export default {
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, var(--primary), var(--primary-light));
+  background: linear-gradient(135deg, var(--primary), var(--peach));
   color: #ffffff;
   box-shadow: 0 4px 12px rgba(0, 48, 73, 0.2);
 }

@@ -152,7 +152,7 @@
 
               <div class="form-control">
                 <label>Due Date *</label>
-                <input v-model="dueDate" type="date" required />
+                <input v-model="dueDate" type="date" :min="today" required />
               </div>
             </div>
 
@@ -375,6 +375,17 @@ export default {
     isCurrentWeek() {
       return this.weekOffset === 0
     },
+    today() {
+      const d = new Date()
+      d.setHours(0, 0, 0, 0)
+      return d.toISOString().split('T')[0]
+    },
+    isPastDate(dateString) {
+      if (!dateString) return false
+      const d = new Date(dateString)
+      d.setHours(0, 0, 0, 0)
+      return d < this.today
+    },
     myChoresThisWeek() {
       if (!this.currentUser) return []
       const userLower = this.currentUser.toLowerCase()
@@ -453,6 +464,12 @@ export default {
         this.errorMessage = 'Chore title and due date are required.'
         return
       }
+
+      if (new Date(this.dueDate) < new Date(this.today)) {
+        this.errorMessage = 'Due date cannot be in the past.'
+        return
+      }
+
       if (!this.householdCode || !this.currentUser) {
         this.errorMessage = 'No household or user. Please login again.'
         return

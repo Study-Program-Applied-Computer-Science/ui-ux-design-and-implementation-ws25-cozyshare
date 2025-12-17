@@ -541,7 +541,7 @@ export default {
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, var(--primary), var(--primary-light));
+  background: linear-gradient(135deg, var(--primary), var(--peach));
   color: #ffffff;
   box-shadow: 0 4px 12px rgba(0, 48, 73, 0.2);
 }

@@ -73,12 +73,16 @@
           <h3>Who Owes Whom</h3>
           <p class="small-subtitle">Settlement breakdown</p>
 
-          <div v-if="activeSettlements.length === 0" class="empty-msg">
+          <div v-if="userActiveSettlements.length === 0" class="empty-msg">
             <span class="check-emoji">✨</span>
             <p>All settled up!</p>
           </div>
 
-          <div v-for="settlement in activeSettlements" :key="settlement.id" class="settlement-item">
+          <div
+            v-for="settlement in userActiveSettlements"
+            :key="settlement.id"
+            class="settlement-item"
+          >
             <div class="settlement-content">
               <p class="settlement-text">
                 <strong :class="{ 'highlight-you': settlement.from === currentUser.name }">{{
@@ -449,6 +453,14 @@ export default {
       return this.settlements.filter((s) => !this.isSettlementAlreadySettled(s))
     },
 
+    userActiveSettlements() {
+      if (!this.currentUser?.name) return []
+
+      return this.activeSettlements.filter(
+        (s) => s.from === this.currentUser.name || s.to === this.currentUser.name,
+      )
+    },
+
     perPersonAmount() {
       return this.form.amount && this.form.splitWith.length > 0
         ? this.form.amount / this.form.splitWith.length
@@ -756,7 +768,7 @@ export default {
   border: none;
   border-radius: 12px;
   padding: 10px 20px;
-  background: linear-gradient(135deg, var(--primary), var(--primary-light));
+  background: linear-gradient(135deg, var(--primary), var(--peach));
   color: #ffffff;
   cursor: pointer;
   font-weight: 600;
@@ -1308,7 +1320,7 @@ export default {
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, var(--primary), var(--primary-light));
+  background: linear-gradient(135deg, var(--primary), var(--peach));
   color: #ffffff;
   box-shadow: 0 4px 12px rgba(0, 48, 73, 0.2);
 }
