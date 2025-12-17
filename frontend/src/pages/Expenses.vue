@@ -81,11 +81,11 @@
           <div v-for="settlement in activeSettlements" :key="settlement.id" class="settlement-item">
             <div class="settlement-content">
               <p class="settlement-text">
-                <strong :class="{ 'highlight-you': settlement.from === currentUser }">{{
+                <strong :class="{ 'highlight-you': settlement.from === currentUser.name }">{{
                   settlement.from
                 }}</strong>
                 owes
-                <strong :class="{ 'highlight-you': settlement.to === currentUser }">{{
+                <strong :class="{ 'highlight-you': settlement.to === currentUser.name }">{{
                   settlement.to
                 }}</strong>
               </p>
@@ -104,26 +104,24 @@
             <p>No settlements yet</p>
           </div>
 
-          <div v-for="payment in yourPaymentHistory" :key="payment.id" class="history-item">
+          <!-- NOTE: now coming from backend -->
+          <div v-for="payment in yourPaymentHistory" :key="payment._id" class="history-item">
             <div class="history-icon">✅</div>
             <div class="history-content">
               <p class="history-text">
-                <template v-if="payment.from === currentUser"
+                <template v-if="payment.from === currentUser.name"
                   >You paid <strong>{{ payment.to }}</strong></template
                 >
                 <template v-else
                   ><strong>{{ payment.from }}</strong> paid you</template
                 >
               </p>
-              <p class="history-amount">€{{ payment.amount.toFixed(2) }}</p>
-              <p class="history-date">{{ formatDate(payment.date) }}</p>
+              <p class="history-amount">€{{ Number(payment.amount).toFixed(2) }}</p>
+              <p class="history-date">{{ formatDate(payment.createdAt) }}</p>
             </div>
-            <button
-              v-if="canUndoPayment(payment)"
-              class="undo-btn"
-              @click="undoPayment(payment.id)"
-              title="Undo (5 min)"
-            >
+
+            <!-- Undo is always available -->
+            <button class="undo-btn" @click="undoPayment(payment._id)" title="Undo settlement">
               ↩️
             </button>
           </div>
@@ -177,7 +175,7 @@
                 <select v-model="form.paidBy" required class="select-input">
                   <option value="">Select person</option>
                   <option v-for="member in houseMembers" :key="member" :value="member">
-                    {{ member === currentUser.name ? ' (You)' : '' }}
+                    {{ member }}{{ member === currentUser.name ? ' (You)' : '' }}
                   </option>
                 </select>
               </div>
@@ -198,7 +196,7 @@
                     <span class="checkbox-custom"></span>
                     <span class="checkbox-label">
                       {{ member }}
-                      <span v-if="member === currentUser" class="you-badge">You</span>
+                      <span v-if="member === currentUser.name" class="you-badge">You</span>
                     </span>
                   </label>
                 </div>
@@ -328,8 +326,9 @@ export default {
         splitWith: [],
       },
       expenses: [],
-      paymentHistory: [],
-      settledIds: new Set(),
+
+      // NEW: persisted settlements from backend (shared across accounts)
+      settlementRecords: [],
     }
   },
   computed: {
@@ -353,29 +352,40 @@ export default {
     youOwe() {
       let balance = 0
 
+      // 1) Base balance from expenses (your existing logic)
       this.expenses.forEach((exp) => {
         const isInSplit = exp.splitWith.includes(this.currentUser.name)
 
         if (exp.paidBy === this.currentUser.name) {
-          // You paid → others in split owe you
           exp.splitWith.forEach((person) => {
             if (person !== this.currentUser.name) {
-              balance -= exp.perPerson
+              balance -= exp.perPerson // others owe you
             }
           })
         } else if (isInSplit) {
-          // Someone else paid → you owe
-          balance += exp.perPerson
+          balance += exp.perPerson // you owe
         }
+      })
+
+      // 2) Apply settlements (IMPORTANT)
+      // If you are the payer (from) → your "owe" reduces
+      // If you are the receiver (to) → others owe you reduces (moves toward 0)
+      ;(this.settlementRecords || []).forEach((s) => {
+        const amt = Number(s.amount) || 0
+        if (s.from === this.currentUser.name) balance -= amt
+        if (s.to === this.currentUser.name) balance += amt
       })
 
       return balance
     },
+
+    // now derived from backend settlements (shared)
     yourPaymentHistory() {
-      return this.paymentHistory
+      return (this.settlementRecords || [])
         .filter((p) => p.from === this.currentUser.name || p.to === this.currentUser.name)
-        .sort((a, b) => new Date(b.date) - new Date(a.date))
+        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
     },
+
     settlements() {
       const balances = {}
 
@@ -391,6 +401,18 @@ export default {
           balances[member] -= exp.perPerson
           balances[exp.paidBy] += exp.perPerson
         })
+      })
+
+      // Apply existing settlements to balances so remaining dues reduce
+      ;(this.settlementRecords || []).forEach((s) => {
+        const amt = Number(s.amount) || 0
+        if (!amt) return
+        if (balances[s.from] === undefined) balances[s.from] = 0
+        if (balances[s.to] === undefined) balances[s.to] = 0
+
+        // debtor pays → debtor becomes less negative, creditor becomes less positive
+        balances[s.from] += amt
+        balances[s.to] -= amt
       })
 
       const settlements = []
@@ -421,9 +443,12 @@ export default {
 
       return settlements
     },
+
+    // hide settlements that are already saved in DB
     activeSettlements() {
-      return this.settlements.filter((s) => !this.settledIds.has(s.id))
+      return this.settlements.filter((s) => !this.isSettlementAlreadySettled(s))
     },
+
     perPersonAmount() {
       return this.form.amount && this.form.splitWith.length > 0
         ? this.form.amount / this.form.splitWith.length
@@ -438,6 +463,7 @@ export default {
       if (newVal) {
         this.fetchHouseholdMembers()
         this.fetchExpenses()
+        this.fetchSettlements() // NEW
       }
     },
   },
@@ -455,6 +481,7 @@ export default {
         this.isLoading = false
       }
     },
+
     async fetchHouseholdMembers() {
       if (!this.householdCode) return
 
@@ -470,6 +497,31 @@ export default {
         this.houseMembers = []
       }
     },
+
+    // NEW: load settlements from backend
+    async fetchSettlements() {
+      if (!this.householdCode) return
+      try {
+        const res = await axios.get('http://localhost:5000/api/settlements', {
+          params: { householdCode: this.householdCode },
+        })
+        this.settlementRecords = res.data || []
+      } catch (err) {
+        console.error('Error fetching settlements', err)
+        this.settlementRecords = []
+      }
+    },
+
+    // NEW: check if a settlement is already saved
+    isSettlementAlreadySettled(s) {
+      return (this.settlementRecords || []).some((r) => {
+        const sameFrom = r.from === s.from
+        const sameTo = r.to === s.to
+        const sameAmount = Math.abs(Number(r.amount) - Number(s.amount)) < 0.01
+        return sameFrom && sameTo && sameAmount
+      })
+    },
+
     closeModal() {
       this.showModal = false
       this.resetForm()
@@ -490,6 +542,7 @@ export default {
     toggleSelectAll() {
       this.form.splitWith = this.isAllSelected ? [] : [...this.houseMembers]
     },
+
     async onSubmit() {
       this.errorMessage = ''
       if (!this.form.title || !this.form.amount || !this.form.paidBy) {
@@ -528,6 +581,7 @@ export default {
         this.isSubmitting = false
       }
     },
+
     async deleteExpense(id) {
       try {
         await axios.delete(`http://localhost:5000/api/expenses/${id}`)
@@ -539,51 +593,52 @@ export default {
         this.showToast('Failed to delete bill', 'error')
       }
     },
-    settlePayment(settlementId) {
+
+    // UPDATED: persist settlement to backend so it appears for all users
+    async settlePayment(settlementId) {
       const settlement = this.settlements.find((s) => s.id === settlementId)
       if (!settlement) return
 
-      const payment = {
-        id: Date.now(),
-        from: settlement.from,
-        to: settlement.to,
-        amount: settlement.amount,
-        date: new Date().toISOString(),
-        timestamp: Date.now(),
+      try {
+        await axios.post('http://localhost:5000/api/settlements', {
+          householdCode: this.householdCode,
+          from: settlement.from,
+          to: settlement.to,
+          amount: settlement.amount,
+        })
+
+        await this.fetchSettlements()
+
+        this.showToast(
+          `Settlement saved: ${settlement.from} → ${settlement.to} €${settlement.amount.toFixed(
+            2,
+          )}`,
+          'success',
+        )
+      } catch (err) {
+        console.error('Error saving settlement', err)
+        this.showToast('Failed to save settlement', 'error')
       }
-
-      this.paymentHistory.unshift(payment)
-      this.settledIds.add(settlementId)
-      this.showToast(
-        `Settlement recorded: ${settlement.from} → ${settlement.to} $${settlement.amount.toFixed(2)}`,
-        'success',
-      )
     },
-    undoPayment(paymentId) {
-      const paymentIndex = this.paymentHistory.findIndex((p) => p.id === paymentId)
-      if (paymentIndex === -1) return
 
-      const payment = this.paymentHistory[paymentIndex]
-      const matchingSettlement = this.settlements.find(
-        (s) =>
-          s.from === payment.from &&
-          s.to === payment.to &&
-          Math.abs(s.amount - payment.amount) < 0.01,
-      )
+    // UPDATED: undo settlement in backend
+    async undoPayment(settlementMongoId) {
+      try {
+        await axios.delete(`http://localhost:5000/api/settlements/${settlementMongoId}`)
+        await this.fetchSettlements()
+        this.showToast('Settlement undone', 'info')
+      } catch (err) {
+        console.error('Undo settlement error', err)
+        this.showToast('Failed to undo settlement', 'error')
+      }
+    },
 
-      if (matchingSettlement) this.settledIds.delete(matchingSettlement.id)
-      this.paymentHistory.splice(paymentIndex, 1)
-      this.showToast('Settlement undone', 'info')
-    },
-    canUndoPayment(payment) {
-      const fiveMinutesAgo = Date.now() - 5 * 60 * 1000
-      return payment.timestamp && payment.timestamp > fiveMinutesAgo
-    },
     showToast(message, type = 'success') {
       this.toastMessage = message
       this.toastType = type
-      setTimeout(() => (this.toastMessage = ''), 3000)
+      setTimeout(() => (this.toastMessage = ''), 5)
     },
+
     formatDate(dateString) {
       return new Date(dateString).toLocaleDateString(undefined, {
         month: 'short',
@@ -596,12 +651,14 @@ export default {
     if (this.householdCode) {
       this.fetchHouseholdMembers()
       this.fetchExpenses()
+      this.fetchSettlements() //NEW
     }
   },
 }
 </script>
 
 <style scoped>
+/* (YOUR CSS: unchanged) */
 .expenses {
   max-width: 1200px;
   margin: 0 auto;
@@ -986,7 +1043,6 @@ export default {
 }
 
 .form-control input,
-/* Continue from .form-control input */
 .form-control select,
 .form-control textarea {
   width: 100%;
@@ -1298,7 +1354,6 @@ export default {
   font-size: 1.1rem;
 }
 
-/* Toast Notification */
 .toast {
   position: fixed;
   bottom: 32px;
@@ -1337,7 +1392,6 @@ export default {
   font-size: 1.3rem;
 }
 
-/* Modal Transitions */
 .modal-fade-enter-active,
 .modal-fade-leave-active {
   transition: opacity 0.3s ease;
@@ -1358,7 +1412,6 @@ export default {
   transform: scale(0.9) translateY(20px);
 }
 
-/* Toast Transitions */
 .toast-enter-active,
 .toast-leave-active {
   transition: all 0.3s ease;
@@ -1374,7 +1427,6 @@ export default {
   transform: translateY(20px);
 }
 
-/* Responsive */
 @media (max-width: 1024px) {
   .summary-cards {
     grid-template-columns: 1fr;
