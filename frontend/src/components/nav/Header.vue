@@ -1,7 +1,9 @@
 <template>
   <header class="header">
     <div class="header__logo">
-      <span class="logo-circle">🏡</span>
+      <router-link to="/" class="logo-link">
+        <img class="logo-img" src="@/logo.png" alt="CozyShare logo" />
+      </router-link>
       <router-link to="/" class="logo-text">CozyShare</router-link>
     </div>
 
@@ -80,14 +82,20 @@ export default {
   gap: 0.6rem;
 }
 
-.logo-circle {
-  width: 2.2rem;
-  height: 2.2rem;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.18);
+.logo-link {
   display: flex;
   align-items: center;
-  justify-content: center;
+  gap: 0.6rem;
+  text-decoration: none;
+}
+
+.logo-img {
+  width: 2.8rem;
+  height: 2.8rem;
+  border-radius: 999px;
+  background: #fefcfb;
+  padding: 6px;
+  object-fit: contain;
 }
 
 .logo-text {
