@@ -37,29 +37,44 @@ router.post("/register", async (req, res) => {
     let householdCode = null;
 
     // 2) create new household
-    if (mode === "create") {
-      if (!householdName) {
-        return res
-          .status(400)
-          .json({ message: "Household name is required to create a household" });
-      }
+if (mode === "create") {
+  if (!householdName) {
+    return res
+      .status(400)
+      .json({ message: "Household name is required to create a household" });
+  }
 
-      // generate unique code
-      let code = generateHouseholdCode();
-      let existingHousehold = await Household.findOne({ code });
+  // generate unique code
+  let code = generateHouseholdCode();
 
-      while (existingHousehold) {
-        code = generateHouseholdCode();
-        existingHousehold = await Household.findOne({ code });
-      }
+  // IMPORTANT: check both fields so it works with your mixed DB state
+  let existingHousehold = await Household.findOne({
+    $or: [{ code }, { householdCode: code }],
+  });
 
-      const household = await Household.create({
-        name: householdName,
-        code,
-      });
+  while (existingHousehold) {
+    code = generateHouseholdCode();
+    existingHousehold = await Household.findOne({
+      $or: [{ code }, { householdCode: code }],
+    });
+  }
 
-      householdCode = household.code;
+  // IMPORTANT: create household with BOTH fields so nothing else breaks
+  // and include members/createdBy (common required fields in your schema)
+  const household = await Household.create({
+    name: householdName,
 
+    // support both schema styles
+    code,                // your join flow uses this
+    householdCode: code, // your expenses/members routes likely use this
+
+    // these often are required in schema; safe even if not required
+    createdBy: name,
+    members: [name], // just store names for now; can be extended later if needed
+  });
+
+  // store for user
+  householdCode = household.householdCode || household.code;
       // 3) join existing household
     } else if (mode === "join") {
       if (!inviteCode) {
@@ -100,6 +115,9 @@ router.post("/register", async (req, res) => {
       householdCode: user.householdCode,
     });
   } catch (err) {
+    if (err.name === "ValidationError") {
+  return res.status(400).json({ message: err.message });
+}
     console.error("Register error:", err);
     res.status(500).json({ message: "Server error" });
   }
