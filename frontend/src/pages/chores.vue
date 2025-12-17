@@ -377,8 +377,10 @@ export default {
     },
     today() {
       const d = new Date()
-      d.setHours(0, 0, 0, 0)
-      return d.toISOString().split('T')[0]
+      const year = d.getFullYear()
+      const month = String(d.getMonth() + 1).padStart(2, '0')
+      const day = String(d.getDate()).padStart(2, '0')
+      return `${year}-${month}-${day}`
     },
     isPastDate(dateString) {
       if (!dateString) return false
@@ -465,7 +467,7 @@ export default {
         return
       }
 
-      if (new Date(this.dueDate) < new Date(this.today)) {
+      if (this.isPastDate(this.dueDate)) {
         this.errorMessage = 'Due date cannot be in the past.'
         return
       }
