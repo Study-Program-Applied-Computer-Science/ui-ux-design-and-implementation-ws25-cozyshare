@@ -11,6 +11,7 @@ const noticeRoutes = require("./routes/noticeRoutes");
 const groceryRoutes = require("./routes/groceryRoutes");
 const expenseRoutes = require("./routes/expenseRoutes");
 const householdRoutes = require("./routes/householdRoutes");
+const settlementRoutes = require("./routes/settlementRoutes");
 
 const app = express();
 
@@ -30,6 +31,7 @@ app.use("/api/notices", noticeRoutes);
 app.use("/api/groceries", groceryRoutes);
 app.use("/api/expenses", expenseRoutes);
 app.use("/api/households", householdRoutes);
+app.use("/api/settlements", settlementRoutes);
 
 // root route
 app.get("/", (req, res) => {

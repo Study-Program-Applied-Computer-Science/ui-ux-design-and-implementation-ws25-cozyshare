@@ -13,7 +13,7 @@
       <div class="expense-details">
         <div class="detail-item">
           <span class="label">Amount:</span>
-          <span class="value amount">€{{ expense.amount.toFixed(2) }}</span>
+          <span class="value amount">€{{ Number(expense.amount || 0).toFixed(2) }}</span>
         </div>
 
         <div class="detail-item">
@@ -26,9 +26,7 @@
 
         <div class="detail-item">
           <span class="label">Your share:</span>
-          <span class="value share">
-            {{ yourShare ? `$${yourShare.toFixed(2)}` : '0' }}
-          </span>
+          <span class="value share"> €{{ Number(yourShare || 0).toFixed(2) }} </span>
         </div>
 
         <div class="detail-item">
@@ -46,7 +44,10 @@
     </div>
 
     <div class="expense-actions">
-      <button class="delete-btn" @click="$emit('delete', expense)" title="Delete bill">🗑️</button>
+      <!-- Emit ONLY the id -->
+      <button class="delete-btn" @click="$emit('delete', expense._id)" title="Delete bill">
+        🗑️
+      </button>
     </div>
   </article>
 </template>
@@ -60,26 +61,30 @@ export default {
       type: Object,
       required: true,
     },
+    // parent passes currentUser object, so accept Object
     currentUser: {
-      type: String,
-      default: '',
+      type: Object,
+      default: null,
     },
   },
 
   emits: ['delete'],
 
   computed: {
+    currentUserName() {
+      return this.currentUser?.name || this.currentUser?.email || ''
+    },
+
     isPaidByYou() {
-      return this.expense.paidBy === this.currentUser
+      return this.expense.paidBy === this.currentUserName
     },
 
     yourShare() {
       // If you are not included in the split, you owe nothing
-      if (!this.expense.splitWith?.includes(this.currentUser)) {
+      if (!this.expense.splitWith?.includes(this.currentUserName)) {
         return 0
       }
-
-      return this.expense.perPerson
+      return this.expense.perPerson || 0
     },
 
     typeIcon() {
@@ -92,22 +97,8 @@ export default {
   },
 
   methods: {
-    data() {
-      return {
-        showDeleteModal: false,
-      }
-    },
-    requestDelete() {
-      this.showDeleteModal = true
-    },
-    confirmDelete() {
-      this.$emit('delete', this.expense._id)
-      this.showDeleteModal = false
-    },
-    cancelDelete() {
-      this.showDeleteModal = false
-    },
     formatDate(dateString) {
+      if (!dateString) return ''
       return new Date(dateString).toLocaleDateString(undefined, {
         month: 'short',
         day: 'numeric',
@@ -267,7 +258,7 @@ export default {
   }
 }
 
-/* Modal Styles */
+/* Modal styles remain (unused currently but kept) */
 .modal-overlay {
   position: fixed;
   inset: 0;

@@ -27,8 +27,7 @@
         <span class="welcome">Hi, {{ userName || 'Roomie' }} </span>
         <span v-if="householdCode" class="household-chip"> Code: {{ householdCode }} </span>
       </div>
-      <button v-if="!isLoggedIn" class="btn btn-light" @click="goToLogin">Login</button>
-      <button v-else class="btn btn-outline" @click="logout">Logout</button>
+      <button v-if="isLoggedIn" class="btn btn-light" @click="logout">Logout</button>
     </div>
   </header>
 </template>
