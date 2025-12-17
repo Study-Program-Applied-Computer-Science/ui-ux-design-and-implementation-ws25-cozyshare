@@ -382,12 +382,7 @@ export default {
       const day = String(d.getDate()).padStart(2, '0')
       return `${year}-${month}-${day}`
     },
-    isPastDate(dateString) {
-      if (!dateString) return false
-      const d = new Date(dateString)
-      d.setHours(0, 0, 0, 0)
-      return d < this.today
-    },
+
     myChoresThisWeek() {
       if (!this.currentUser) return []
       const userLower = this.currentUser.toLowerCase()
@@ -433,6 +428,17 @@ export default {
       this.assignedTo = ''
       this.dueDate = ''
       this.frequency = 'once'
+    },
+    isPastDate(dateString) {
+      if (!dateString) return false
+
+      const selected = new Date(dateString)
+      selected.setHours(0, 0, 0, 0)
+
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+
+      return selected < today
     },
     async fetchChores() {
       if (!this.householdCode) return
