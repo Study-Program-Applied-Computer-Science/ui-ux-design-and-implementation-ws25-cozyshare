@@ -2,6 +2,9 @@
   <section class="auth-page">
     <div class="auth-card">
       <!-- Tabs -->
+       <div class="login-page">
+      <h2 style="text-align: center">Welcome to CozyShare</h2>
+  </div>
       <div class="tabs">
         <button :class="['tab-btn', { active: mode === 'login' }]" @click="switchMode('login')">
           Login
