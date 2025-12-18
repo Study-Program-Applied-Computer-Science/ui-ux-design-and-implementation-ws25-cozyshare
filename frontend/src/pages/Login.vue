@@ -243,7 +243,7 @@ export default {
         const raw = res.data
         const codeFromBackend = raw.householdCode || raw.user?.householdCode || null
 
-        // do NOT auto-login → show success + code
+        // do NOT auto-login → show success & code
         this.successMessage = 'Registered successfully. Please login to continue.'
         this.lastHouseholdCode =
           codeFromBackend || (this.householdMode === 'join' ? this.inviteCode.trim() : '')

@@ -383,7 +383,7 @@ export default {
 
       try {
         await axios.delete(`http://localhost:5000/api/notices/${id}`, {
-          data: { user: me }, // IMPORTANT: backend needs this for "only author can delete"
+          data: { user: me }, //  backend needs this for "only author can delete"
         })
       } catch (err) {
         console.error('Delete failed', err)
