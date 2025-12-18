@@ -50,9 +50,7 @@
         class="toggle-btn undo"
         @click="handleUndo"
         title="Undo completion"
-      >
-        <span>↩️</span>
-      </button>
+      ></button>
     </div>
   </article>
 </template>
