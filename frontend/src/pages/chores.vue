@@ -463,7 +463,7 @@ export default {
       })
       this.houseMembers = Array.from(membersSet).sort()
       if (this.houseMembers.length === 1) {
-        this.houseMembers = [this.currentUser, 'Roommate 1', 'Roommate 2']
+        this.houseMembers = [this.currentUser]
       }
     },
     async onSubmit() {
