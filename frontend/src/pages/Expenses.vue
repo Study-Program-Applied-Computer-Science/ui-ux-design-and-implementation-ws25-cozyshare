@@ -606,7 +606,7 @@ export default {
       }
     },
 
-    // UPDATED: persist settlement to backend so it appears for all users
+    // persist settlement to backend so it appears for all users
     async settlePayment(settlementId) {
       const settlement = this.settlements.find((s) => s.id === settlementId)
       if (!settlement) return
