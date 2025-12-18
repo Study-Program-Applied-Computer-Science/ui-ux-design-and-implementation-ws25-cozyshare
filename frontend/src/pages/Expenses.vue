@@ -331,7 +331,7 @@ export default {
       },
       expenses: [],
 
-      // NEW: persisted settlements from backend (shared across accounts)
+      // persisted settlements from backend (shared across accounts)
       settlementRecords: [],
     }
   },
@@ -475,7 +475,7 @@ export default {
       if (newVal) {
         this.fetchHouseholdMembers()
         this.fetchExpenses()
-        this.fetchSettlements() // NEW
+        this.fetchSettlements()
       }
     },
   },
@@ -510,7 +510,7 @@ export default {
       }
     },
 
-    // NEW: load settlements from backend
+    // load settlements from backend
     async fetchSettlements() {
       if (!this.householdCode) return
       try {
@@ -524,7 +524,7 @@ export default {
       }
     },
 
-    // NEW: check if a settlement is already saved
+    // check if a settlement is already saved
     isSettlementAlreadySettled(s) {
       return (this.settlementRecords || []).some((r) => {
         const sameFrom = r.from === s.from
@@ -663,14 +663,13 @@ export default {
     if (this.householdCode) {
       this.fetchHouseholdMembers()
       this.fetchExpenses()
-      this.fetchSettlements() //NEW
+      this.fetchSettlements()
     }
   },
 }
 </script>
 
 <style scoped>
-/* (YOUR CSS: unchanged) */
 .expenses {
   max-width: 1200px;
   margin: 0 auto;
