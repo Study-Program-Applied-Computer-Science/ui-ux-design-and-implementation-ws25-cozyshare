@@ -68,10 +68,10 @@ CozyShare aims to replace scattered messages, forgotten chores, and awkward mone
 
    ```
 
-2. Install dependencies
+2. Install dependencies:
    npm install
 
-3. Run the development server
+3. Run the development server:
    npm run dev
 
 Open http://localhost:5173 in your browser
